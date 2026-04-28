@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРОЕКТ РАЗГРОМ</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Russo+One&family=IBM+Plex+Mono:wght@400;700&family=Noto+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-hot: #e74c3c;
+    --dark: #0a0a0a;
+    --dark2: #111111;
+    --dark3: #1a1a1a;
+    --khaki: #4a4a3a;
+    --khaki-light: #6b6b52;
+    --text: #d4d0c8;
+    --text-dim: #7a7870;
+    --accent: #c0392b;
+    --border: #2a2a2a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body { padding-bottom: 40px; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Noto Sans', sans-serif;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 40px 80px;
+    overflow: hidden;
+    background: var(--dark);
+  }
+
+  .header-bg-lines {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(192,57,43,0.06) 60px),
+      repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(192,57,43,0.04) 60px);
+    pointer-events: none;
+  }
+
+  .header-diagonal {
+    position: absolute;
+    top: 0; right: 0;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 30%, rgba(192,57,43,0.07) 100%);
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+    pointer-events: none;
+  }
+
+  .classified-stamp {
+    position: absolute;
+    top: 40px;
+    right: 60px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--red);
+    border: 4px solid var(--red);
+    padding: 6px 20px;
+    transform: rotate(12deg);
+    opacity: 0.35;
+    letter-spacing: 6px;
+    pointer-events: none;
+  }
+
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(10,10,10,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: var(--red);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--red); }
+
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 14vw, 13rem);
+    line-height: 0.88;
+    letter-spacing: 2px;
+    color: #fff;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.4s;
+  }
+
+  .hero-title span { color: var(--red); }
+
+  .hero-subtitle {
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(1.1rem, 2.5vw, 1.8rem);
+    color: var(--text-dim);
+    margin-top: 20px;
+    letter-spacing: 2px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.6s;
+  }
+
+  .hero-counter-row {
+    display: flex;
+    gap: 48px;
+    margin-top: 60px;
+    margin-bottom: 60px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.8s;
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--red);
+  }
+
+  .hero-stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .hero-divider {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 1.2s;
+  }
+
+  .scroll-hint::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--red);
+    animation: expandLine 1.5s ease infinite;
+  }
+
+  @keyframes expandLine {
+    0%, 100% { width: 40px; opacity: 1; }
+    50% { width: 20px; opacity: 0.4; }
+  }
+
+  /* SECTION BASE */
+  section {
+    padding: 100px 40px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--red);
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 50px;
+  }
+
+  /* MANIFESTO */
+  .manifesto-wrap {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .manifesto-header {
+    background: var(--dark3);
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: #e6a817; }
+  .dot-green { background: #27ae60; }
+
+  .manifesto-body {
+    padding: 40px 40px;
+  }
+
+  .manifesto-intro {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+  }
+
+  .manifesto-block {
+    margin-bottom: 36px;
+  }
+
+  .manifesto-block h3 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1rem;
+    color: var(--red);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .manifesto-block h3::before {
+    content: attr(data-num);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+  }
+
+  .manifesto-block p, .manifesto-block ul {
+    font-size: 0.95rem;
+    line-height: 1.9;
+    color: var(--text-dim);
+  }
+
+  .manifesto-block ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .manifesto-block ul li::before {
+    content: '//';
+    color: var(--red);
+    margin-right: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* CLANS */
+  .clans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 2px;
+  }
+
+  .clan-card {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, background 0.25s;
+    cursor: default;
+  }
+
+  .clan-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 0%;
+    background: var(--red);
+    transition: height 0.3s ease;
+  }
+
+  .clan-card:hover { border-color: var(--khaki-light); background: var(--dark3); }
+  .clan-card:hover::before { height: 100%; }
+
+  .clan-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .clan-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 20px;
+    line-height: 1;
+  }
+
+  .clan-bar-wrap {
+    margin-bottom: 10px;
+  }
+
+  .clan-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .clan-bar-bg {
+    height: 3px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .clan-bar-fill {
+    height: 100%;
+    background: var(--red);
+    transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+
+  .clan-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--red);
+    line-height: 1;
+    margin-top: 16px;
+  }
+
+  .clan-num-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* TOTAL COUNTER */
+  .counter-section {
+    background: var(--dark2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .counter-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(192,57,43,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .counter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .counter-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(6rem, 18vw, 14rem);
+    line-height: 0.9;
+    color: var(--red);
+    text-shadow: 0 0 80px rgba(192,57,43,0.3);
+    display: block;
+  }
+
+  .counter-sub {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-top: 20px;
+  }
+
+  .target-wrap {
+    margin-top: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border);
+    padding: 14px 28px;
+    background: var(--dark3);
+  }
+
+  .target-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .progress-bar-bg {
+    width: 200px;
+    height: 4px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--red);
+    width: 64%;
+    position: relative;
+  }
+
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -3px;
+    width: 10px;
+    height: 10px;
+    background: var(--red);
+    border-radius: 50%;
+  }
+
+  .target-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--red);
+  }
+
+  /* GOALS */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+
+  .goal-item {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    padding: 32px 32px;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .goal-item:hover { background: var(--dark3); }
+
+  .goal-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+
+  .goal-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.05rem;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  .goal-text {
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--text-dim);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--dark);
+  }
+
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    color: var(--red);
+  }
+
+  .footer-copy {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Ticker */
+  .ticker-wrap {
+    background: var(--red);
+    overflow: hidden;
+    padding: 10px 0;
+    position: relative;
+  }
+
+  .ticker-inner {
+    display: flex;
+    width: max-content;
+    animation: ticker 25s linear infinite;
+  }
+
+  .ticker-item {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.85);
+    padding: 0 40px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .ticker-item span { color: rgba(255,255,255,0.4); margin: 0 10px; }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  @media (max-width: 768px) {
+    .nav { padding: 14px 20px; }
+    .nav-links { gap: 16px; }
+    .nav-links a { font-size: 0.65rem; letter-spacing: 1px; }
+    header { padding: 90px 20px 80px; }
+    section { padding: 60px 20px; }
+    .hero-title { font-size: clamp(4rem, 20vw, 7rem); }
+    .hero-subtitle { font-size: 1rem; }
+    .hero-counter-row { gap: 20px; flex-wrap: wrap; margin-bottom: 40px; }
+    .hero-stat-num { font-size: 2.5rem; }
+    .goals-grid { grid-template-columns: 1fr; }
+    .clans-grid { grid-template-columns: 1fr 1fr; }
+    footer { flex-direction: column; gap: 16px; text-align: center; padding: 30px 20px; }
+    .manifesto-body { padding: 24px 16px; }
+    .classified-stamp { display: none; }
+    .counter-section { padding: 60px 20px; }
+    .target-wrap { flex-wrap: wrap; justify-content: center; padding: 12px 16px; }
+    .progress-bar-bg { width: 140px; }
+    .section-title { font-size: clamp(2rem, 8vw, 3.5rem); margin-bottom: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">РАЗГРОМ</div>
+  <ul class="nav-links">
+    <li><a href="#manifesto">Манифест</a></li>
+    <li><a href="#clans">Коалиция</a></li>
+    <li><a href="#goals">Цели</a></li>
+    <li><a href="#comments">Комментарии</a></li>
+  </ul>
+  <div id="auth-btn-wrap" style="display:flex;align-items:center;gap:12px;">
+    <div id="user-info" style="display:none;align-items:center;gap:10px;">
+      <img id="user-avatar" src="" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--red);">
+      <span id="user-name" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text);letter-spacing:1px;"></span>
+      <span id="user-role-badge"></span>
+    </div>
+    <button id="auth-btn" onclick="handleAuth()" style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;padding:7px 16px;background:transparent;color:var(--red);border:1px solid var(--red);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--red)'">ВОЙТИ</button>
+  </div>
+</nav>
+
+<!-- TICKER -->
+<div style="position:fixed; bottom:0; left:0; right:0; z-index:99;">
+  <div class="ticker-wrap">
+    <div class="ticker-inner" id="ticker">
+      <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> 320 УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> 320 УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span></div>
+      <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> 320 УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> 320 УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<header>
+  <div class="header-bg-lines"></div>
+  <div class="header-diagonal"></div>
+  <div class="classified-stamp">CLASSIFIED</div>
+
+  <div class="hero-tag">// SSB2 / SSB2MA / 2025</div>
+  <h1 class="hero-title">ПРОЕКТ<br><span>РАЗГРОМ</span></h1>
+  <p class="hero-subtitle">Единый Фронт. Стратегия стабилизации SSB2</p>
+
+  <div class="hero-counter-row">
+    <div class="hero-stat">
+      <span class="hero-stat-num" id="hero-total">320</span>
+      <span class="hero-stat-label">Участников</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">5</span>
+      <span class="hero-stat-label">Фракций</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">500</span>
+      <span class="hero-stat-label">Цель</span>
+    </div>
+  </div>
+
+  <div class="scroll-hint">SCROLL DOWN</div>
+</header>
+
+<!-- MANIFESTO -->
+<div id="manifesto" style="background: var(--dark2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <section>
+    <div class="section-label">Манифест</div>
+    <h2 class="section-title">ПОЧЕМУ МЫ ЗДЕСЬ</h2>
+    <div class="manifesto-wrap reveal">
+      <div class="manifesto-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <span style="margin-left:8px;">// МАНИФЕСТ</span>
+      </div>
+      <div class="manifesto-body">
+        <p class="manifesto-intro">
+          Ждать когда нам дадут нормальные обновления? Нет. Игра гниёт: читеры, донат вместо контента, 
+          разработчик молчит. Мы собрались сами. Не ради войны, а ради того чтобы нас услышали.
+        </p>
+
+        <div class="manifesto-block">
+          <h3 data-num="01">Главная цель</h3>
+          <p>
+            Собрать 500+ активных игроков в единую коалицию. Когда мы дойдём до этой отметки, 
+            разработчик окажется перед простым выбором: работать с нами или смотреть как его игра пустеет. 
+            Молчание больше не работает в одну сторону.
+          </p>
+        </div>
+
+        <div class="manifesto-block">
+          <h3 data-num="02">Как устроена коалиция</h3>
+          <ul>
+            <li>Лидеры кланов управляют своими проектами и несут ответственность за свою часть</li>
+            <li>Все кланы под одним вектором, без потери своей идентичности</li>
+            <li>Мелкие проекты не поглощаются, а входят на равных</li>
+          </ul>
+        </div>
+
+        <div class="manifesto-block">
+          <h3 data-num="03">Ближайший план</h3>
+          <ul>
+            <li>Агрессивный рост через ивенты и активность внутри SSB2 / SSB2MA</li>
+            <li>Объединение малых серверов и сообществ под общим флагом</li>
+            <li>Стереть границу между SSB2 и SSB2MA, сделать одно общее комьюнити</li>
+          </ul>
+        </div>
+
+        <div class="manifesto-block">
+          <h3 data-num="04">Что будет на 500+</h3>
+          <ul>
+            <li>Блокировка официального трафика и переключение аудитории на наши ресурсы</li>
+            <li>Коллективный ультиматум с конкретными требованиями по обновлениям</li>
+            <li>Если ответа нет, активное комьюнити уходит целиком и разом</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- COUNTER -->
+<div class="counter-section">
+  <p class="counter-label">// Общее число участников коалиции</p>
+  <span class="counter-main" id="big-counter">320</span>
+  <p class="counter-sub">УЧАСТНИКОВ В СТРОЮ</p>
+  <div class="target-wrap">
+    <span class="target-label">ПРОГРЕСС К ЦЕЛИ 500</span>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-fill" style="width:64%"></div>
+    </div>
+    <span class="target-num" id="progress-pct">64%</span>
+  </div>
+</div>
+
+<!-- CLANS -->
+<div id="clans">
+  <section>
+    <div class="section-label">Состав</div>
+    <h2 class="section-title">ФРАКЦИИ КОАЛИЦИИ</h2>
+    <div class="clans-grid" id="clans-grid">
+      <!-- JS generated -->
+    </div>
+  </section>
+</div>
+
+<!-- GOALS -->
+<div id="goals" style="background: var(--dark2); border-top: 1px solid var(--border);">
+  <section>
+    <div class="section-label">Требования</div>
+    <h2 class="section-title">НАШИ ЦЕЛИ</h2>
+    <div class="goals-grid reveal">
+      <div class="goal-item">
+        <div class="goal-num">// 01</div>
+        <div class="goal-title">Рабочий Античит</div>
+        <p class="goal-text">Читеры уничтожают игру быстрее чем любой кризис контента. Без нормального античита разговор о росте онлайна бессмысленный.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 02</div>
+        <div class="goal-title">Меньше Доната, Больше Контента</div>
+        <p class="goal-text">Раз в месяц скин пак не обновление. Хотим механики, ивенты, реальные изменения в геймплее, а не очередной военный паёк за реальные деньги.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 03</div>
+        <div class="goal-title">Диалог с Разработчиком</div>
+        <p class="goal-text">Просто говорить с комьюнити. Не раз в полгода в Telegram, а реально слышать что происходит и что планируется.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 04</div>
+        <div class="goal-title">Обновления по Идеям Игроков</div>
+        <p class="goal-text">Комьюнити годами просит определённые вещи. Мы хотим механизм где голос игрока реально влияет на что добавят в игру.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<!-- COMMENTS -->
+<div id="comments" style="background:var(--dark);border-top:1px solid var(--border);padding-bottom:80px;">
+  <section>
+    <div class="section-label">Голос комьюнити</div>
+    <h2 class="section-title">КОММЕНТАРИИ</h2>
+
+    <div class="manifesto-wrap reveal" style="margin-bottom:28px;">
+      <div class="manifesto-header">
+        <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
+        <span style="margin-left:8px;">// КОММЕНТАРИЙ</span>
+      </div>
+      <div class="manifesto-body" style="padding:24px 28px;">
+        <!-- Статус авторизации -->
+        <div id="comment-auth-status" style="margin-bottom:16px;padding:10px 14px;background:var(--dark);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text-dim);">
+          // Войди через Google чтобы оставить комментарий
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--text-dim);letter-spacing:2px;display:block;margin-bottom:6px;">ОЦЕНКА</label>
+          <div style="display:flex;gap:6px;">
+            <span onclick="setRating(1)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(2)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(3)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(4)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(5)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--text-dim);letter-spacing:2px;display:block;margin-bottom:6px;">СООБЩЕНИЕ</label>
+          <textarea id="c-text" placeholder="Твоё мнение о проекте..." rows="3" style="width:100%;background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'Noto Sans',sans-serif;font-size:0.9rem;padding:10px 14px;outline:none;resize:vertical;" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <button onclick="submitComment()" style="background:var(--red);color:#fff;border:none;font-family:'Russo One',sans-serif;font-size:0.85rem;letter-spacing:2px;padding:12px 28px;cursor:pointer;">ОТПРАВИТЬ</button>
+          <span id="c-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+        </div>
+      </div>
+    </div>
+
+    <details style="margin-bottom:28px;">
+      <summary style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:2px;cursor:pointer;user-select:none;">// МОДЕРАЦИЯ</summary>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);width:120px;letter-spacing:1px;">Комментарий:</span>
+          <input id="del-id" type="text" placeholder="ID комментария..." style="background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:8px 12px;outline:none;width:200px;">
+          <input id="del-code" type="password" placeholder="Код..." style="background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:8px 12px;outline:none;width:130px;">
+          <button onclick="deleteComment()" style="background:transparent;color:var(--red);border:1px solid var(--red);font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:2px;padding:8px 18px;cursor:pointer;">УДАЛИТЬ</button>
+          <span id="del-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);width:120px;letter-spacing:1px;">Ответ:</span>
+          <input id="del-comment-id" type="text" placeholder="ID комментария..." style="background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:8px 12px;outline:none;width:200px;">
+          <input id="del-reply-id" type="text" placeholder="ID ответа..." style="background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:8px 12px;outline:none;width:180px;">
+          <input id="del-reply-code" type="password" placeholder="Код..." style="background:var(--dark3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:8px 12px;outline:none;width:130px;">
+          <button onclick="deleteReply()" style="background:transparent;color:var(--red);border:1px solid var(--red);font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:2px;padding:8px 18px;cursor:pointer;">УДАЛИТЬ</button>
+          <span id="del-reply-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+        </div>
+      </div>
+    </details>
+
+    <div id="reply-form-wrap" style="display:none;margin-bottom:12px;padding:16px;background:var(--dark3);border:1px solid var(--border);border-left:3px solid #8b5cf6;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#8b5cf6;margin-bottom:10px;" id="reply-to-label">// Ответ на комментарий</div>
+      <textarea id="r-text" placeholder="Твой ответ..." rows="2" style="width:100%;background:var(--dark);border:1px solid var(--border);color:var(--text);font-family:'Noto Sans',sans-serif;font-size:0.9rem;padding:8px 12px;outline:none;resize:vertical;margin-bottom:10px;display:block;"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button onclick="submitReply()" style="background:#8b5cf6;color:#fff;border:none;font-family:'Russo One',sans-serif;font-size:0.8rem;letter-spacing:2px;padding:10px 22px;cursor:pointer;">ОТВЕТИТЬ</button>
+        <button onclick="closeReplyForm()" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:8px 16px;cursor:pointer;">ОТМЕНА</button>
+        <span id="r-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+      </div>
+    </div>
+
+    <div id="comments-list" style="display:flex;flex-direction:column;gap:4px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text-dim);padding:20px 0;">Загрузка...</div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-logo">РАЗГРОМ</div>
+  <div class="footer-copy">// SSB2 COALITION // ЕДИНЫЙ ФРОНТ // 2025</div>
+  <div style="width:100%;text-align:center;margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:0.5rem;color:#333;letter-spacing:1px;">Используя сайт, вы соглашаетесь с тем, что при отправке комментариев могут собираться технические данные (браузер, дата, время).</div>
+</footer>
+
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyD0gHs3NpDpYCXYVzatU7URbGWPQatya3c",
+    authDomain: "destroy-project-1bab6.firebaseapp.com",
+    projectId: "destroy-project-1bab6",
+    storageBucket: "destroy-project-1bab6.firebasestorage.app",
+    messagingSenderId: "191445705847",
+    appId: "1:191445705847:web:c87ef6e9905b5c9c215272"
+  });
+
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  var currentUser = null;
+  var currentUserRole = null;
+  var currentRating = 0;
+  var replyToId = null;
+  var replyToName = null;
+  const SPAM_DELAY = 60;
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Супер-админы по uid — добавь свой uid сюда после первого входа
+  const SUPER_ADMINS = [];
+
+  // Постоянные роли по нику
+  const PERMANENT_ROLES = {
+    'JDH':         { role: 'ADMIN', color: '#e74c3c' },
+    'Joe Barbaro': { role: 'ADMIN', color: '#e74c3c' },
+  };
+
+  const ROLE_COLORS = { 'superadmin': '#e74c3c', 'ADMIN': '#e74c3c', 'Moderator': '#8b5cf6', 'Fake': '#f39c12', 'leader': '#27ae60' };
+  const ROLE_LABELS = { 'superadmin': 'SUPER ADMIN', 'ADMIN': 'ADMIN', 'Moderator': 'Moderator', 'Fake': 'Fake', 'leader': 'Лидер' };
+
+  function makeBadge(role) {
+    if (!role) return '';
+    var c = ROLE_COLORS[role] || '#fff';
+    var label = ROLE_LABELS[role] || role;
+    return '<span style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;font-weight:700;color:' + c + ';border:1px solid ' + c + ';padding:1px 6px;letter-spacing:1px;margin-left:6px;">' + label + '</span>';
+  }
+
+  function getNameRole(name) {
+    var n = name ? name.trim() : '';
+    return PERMANENT_ROLES[n] || null;
+  }
+
+  function getRoleBadge(name, firebaseRole) {
+    var perm = getNameRole(name);
+    if (perm) return makeBadge(perm.role);
+    return makeBadge(firebaseRole);
+  }
+
+  function getNameColor(name, firebaseRole) {
+    var perm = getNameRole(name);
+    if (perm) return perm.color;
+    return ROLE_COLORS[firebaseRole] || '#fff';
+  }
+
+  // --- AUTH ---
+  function handleAuth() {
+    if (currentUser) {
+      if (confirm('Выйти из аккаунта?')) auth.signOut();
+    } else {
+      var provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(function(e) {
+        alert('Ошибка входа: ' + e.message);
+      });
+    }
+  }
+
+  auth.onAuthStateChanged(function(user) {
+    currentUser = user;
+    if (user) {
+      // Сохраняем профиль в Firestore
+      db.collection('users').doc(user.uid).set({
+        name: user.displayName,
+        email: user.email,
+        avatar: user.photoURL,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      // Проверяем роль
+      if (SUPER_ADMINS.includes(user.uid)) {
+        currentUserRole = 'superadmin';
+      } else {
+        db.collection('users').doc(user.uid).get().then(function(doc) {
+          if (doc.exists && doc.data().role) {
+            currentUserRole = doc.data().role;
+          }
+          updateUserUI(user);
+        });
+      }
+      updateUserUI(user);
+      document.getElementById('auth-btn').textContent = 'ВЫЙТИ';
+      // Показываем uid в консоли для настройки супер-админа
+      console.log('Твой uid:', user.uid);
+    } else {
+      currentUserRole = null;
+      document.getElementById('user-info').style.display = 'none';
+      document.getElementById('auth-btn').textContent = 'ВОЙТИ';
+    }
+  });
+
+  function updateUserUI(user) {
+    var info = document.getElementById('user-info');
+    info.style.display = 'flex';
+    document.getElementById('user-avatar').src = user.photoURL || '';
+    document.getElementById('user-name').textContent = user.displayName;
+    var badge = currentUserRole ? makeBadge(currentUserRole) : '';
+    document.getElementById('user-role-badge').innerHTML = badge;
+    // Обновляем статус в форме комментария
+    var authStatus = document.getElementById('comment-auth-status');
+    if (authStatus) {
+      authStatus.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<img src="' + (user.photoURL || '') + '" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--red);">' +
+          '<span style="color:var(--text);">' + user.displayName + '</span>' +
+          (currentUserRole ? makeBadge(currentUserRole) : '') +
+          '<span style="color:#27ae60;margin-left:auto;">// Авторизован</span>' +
+        '</div>';
+      authStatus.style.borderColor = '#27ae60';
+    }
+  }
+
+  function setRating(val) {
+    currentRating = val;
+    document.querySelectorAll('.star').forEach(function(s, i) {
+      s.style.color = i < val ? 'var(--red)' : 'var(--border)';
+    });
+  }
+
+  function getSpamCooldown() {
+    var last = localStorage.getItem('razgrom_last_comment');
+    if (!last) return 0;
+    return Math.max(0, SPAM_DELAY - Math.floor((Date.now() - parseInt(last)) / 1000));
+  }
+
+  function startCooldownTimer(statusEl) {
+    function tick() {
+      var left = getSpamCooldown();
+      if (left <= 0) { statusEl.textContent = ''; return; }
+      statusEl.textContent = '// Подожди ' + left + ' сек.';
+      statusEl.style.color = 'var(--red)';
+      setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  function copyId(id) {
+    function fallback() {
+      var el = document.createElement('textarea');
+      el.value = id; el.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(el); el.focus(); el.select();
+      try { document.execCommand('copy'); showCopyToast(); } catch(e) {}
+      document.body.removeChild(el);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(id).then(showCopyToast, fallback);
+    } else { fallback(); }
+  }
+
+  function showCopyToast() {
+    var t = document.getElementById('copy-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'copy-toast';
+      t.style.cssText = 'position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:#8b5cf6;color:#fff;font-family:IBM Plex Mono,monospace;font-size:0.75rem;padding:8px 20px;letter-spacing:2px;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;border-radius:2px;';
+      t.textContent = '// ID скопирован';
+      document.body.appendChild(t);
+    }
+    t.style.opacity = '1';
+    setTimeout(function() { t.style.opacity = '0'; }, 2000);
+  }
+
+  var roleClicks = {};
+  function handleRoleClick(id, name) {
+    roleClicks[id] = (roleClicks[id] || 0) + 1;
+    if (roleClicks[id] >= 3) {
+      roleClicks[id] = 0;
+      var code = prompt('Введи код:');
+      if (code !== '2288') { alert('Неверный код'); return; }
+      var role = prompt('Роль (ADMIN, Moderator або Fake):');
+      if (role !== 'ADMIN' && role !== 'Moderator' && role !== 'Fake') { alert('Неверная роль'); return; }
+      db.collection('comments').doc(id).update({ role: role }).then(function() { alert('Роль установлена!'); });
+    }
+  }
+
+  async function submitComment() {
+    if (!currentUser) {
+      var status = document.getElementById('c-status');
+      status.textContent = '// Войди через Google чтобы писать';
+      status.style.color = 'var(--red)';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+      return;
+    }
+    var text = document.getElementById('c-text').value.trim();
+    var status = document.getElementById('c-status');
+    if (!text) { status.textContent = '// Напиши сообщение'; status.style.color = 'var(--red)'; return; }
+    if (!currentRating) { status.textContent = '// Поставь оценку'; status.style.color = 'var(--red)'; return; }
+    var cd = getSpamCooldown();
+    if (cd > 0) { startCooldownTimer(status); return; }
+    status.textContent = '// Отправка...'; status.style.color = 'var(--text-dim)';
+    try {
+      await db.collection('comments').add({
+        name: currentUser.displayName,
+        avatar: currentUser.photoURL,
+        uid: currentUser.uid,
+        text: text,
+        rating: currentRating,
+        role: currentUserRole || null,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      localStorage.setItem('razgrom_last_comment', Date.now().toString());
+      document.getElementById('c-text').value = '';
+      currentRating = 0;
+      document.querySelectorAll('.star').forEach(function(s) { s.style.color = 'var(--border)'; });
+      status.textContent = '// Отправлено!'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  function openReplyForm(id, name) {
+    replyToId = id; replyToName = name;
+    document.getElementById('reply-to-label').textContent = '// Ответ для: ' + name;
+    var wrap = document.getElementById('reply-form-wrap');
+    wrap.style.display = 'block';
+    var cel = document.getElementById('comment-' + id);
+    if (cel) cel.after(wrap);
+    document.getElementById('r-name').focus();
+  }
+
+  function closeReplyForm() {
+    replyToId = null; replyToName = null;
+    document.getElementById('reply-form-wrap').style.display = 'none';
+    document.getElementById('r-text').value = '';
+    document.getElementById('r-name').value = '';
+    document.getElementById('r-status').textContent = '';
+  }
+
+  async function submitReply() {
+    if (!currentUser) {
+      var status = document.getElementById('r-status');
+      status.textContent = '// Войди через Google чтобы отвечать';
+      status.style.color = 'var(--red)';
+      return;
+    }
+    var text = document.getElementById('r-text').value.trim();
+    var status = document.getElementById('r-status');
+    if (!text) { status.textContent = '// Напиши ответ'; status.style.color = 'var(--red)'; return; }
+    var cd = getSpamCooldown();
+    if (cd > 0) { startCooldownTimer(status); return; }
+    status.textContent = '// Отправка...'; status.style.color = 'var(--text-dim)';
+    try {
+      await db.collection('comments').doc(replyToId).collection('replies').add({
+        name: currentUser.displayName,
+        avatar: currentUser.photoURL,
+        uid: currentUser.uid,
+        text: text,
+        role: currentUserRole || null,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      localStorage.setItem('razgrom_last_comment', Date.now().toString());
+      closeReplyForm();
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  async function deleteComment() {
+    var id = document.getElementById('del-id').value.trim();
+    var code = document.getElementById('del-code').value.trim();
+    var status = document.getElementById('del-status');
+    if (code !== '2288') { status.textContent = '// Неверный код'; status.style.color = 'var(--red)'; return; }
+    if (!id) { status.textContent = '// Введи ID'; status.style.color = 'var(--red)'; return; }
+    try {
+      await db.collection('comments').doc(id).delete();
+      document.getElementById('del-id').value = '';
+      document.getElementById('del-code').value = '';
+      status.textContent = '// Удалено'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  function renderComment(d) {
+    var data = d.data();
+    var stars = '★'.repeat(data.rating || 0) + '☆'.repeat(5 - (data.rating || 0));
+    var date = data.ts ? new Date(data.ts.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+    var roleBadge = getRoleBadge(data.name, data.role);
+    var nameColor = getNameColor(data.name, data.role);
+    var safeName = escHtml(data.name);
+    var safeText = escHtml(data.text);
+    var safeNameJs = (data.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '').replace(/>/g, '');
+    var card = document.createElement('div');
+    card.id = 'comment-' + d.id;
+    card.style.cssText = 'background:var(--dark2);border:1px solid var(--border);border-left:3px solid var(--red);padding:18px 22px;';
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+          (data.avatar ? '<img src="' + escHtml(data.avatar) + '" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);">' : '') +
+          '<span onclick="handleRoleClick(\'' + d.id + '\',\'' + safeNameJs + '\')" style="font-family:Russo One,sans-serif;font-size:0.95rem;color:' + nameColor + ';cursor:pointer;" title="Нажми 3 раза для роли">' + safeName + '</span>' +
+          roleBadge +
+          '<span style="color:var(--red);font-size:0.95rem;">' + stars + '</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;color:var(--text-dim);">' + date + '</span>' +
+          '<button onclick="copyId(\'' + d.id + '\')" style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;color:#888;background:var(--dark3);border:1px solid var(--border);cursor:pointer;padding:3px 8px;" title="Скопировать ID для модерации">ID</button>' +
+        '</div>' +
+      '</div>' +
+      '<p style="font-size:0.9rem;line-height:1.7;color:var(--text-dim);margin-bottom:12px;">' + safeText + '</p>' +
+      '<div id="replies-' + d.id + '" style="margin-left:16px;margin-top:4px;display:flex;flex-direction:column;gap:3px;border-left:2px solid var(--border);padding-left:12px;"></div>' +
+      '<button onclick="openReplyForm(\'' + d.id + '\',\'' + safeNameJs + '\')" style="margin-top:10px;background:transparent;color:var(--text-dim);border:1px solid var(--border);font-family:IBM Plex Mono,monospace;font-size:0.6rem;letter-spacing:2px;padding:5px 12px;cursor:pointer;" onmouseover="this.style.color=\'#8b5cf6\';this.style.borderColor=\'#8b5cf6\'" onmouseout="this.style.color=\'var(--text-dim)\';this.style.borderColor=\'var(--border)\'">// ОТВЕТИТЬ</button>';
+
+    db.collection('comments').doc(d.id).collection('replies').orderBy('ts', 'asc').onSnapshot(function(rSnap) {
+      var repliesEl = document.getElementById('replies-' + d.id);
+      if (!repliesEl) return;
+      repliesEl.innerHTML = '';
+      rSnap.forEach(function(r) {
+        var rd = r.data();
+        var rBadge = getRoleBadge(rd.name, rd.role);
+        var rColor = getNameColor(rd.name, rd.role);
+        var rDate = rd.ts ? new Date(rd.ts.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+        var rEl = document.createElement('div');
+        var safeRName = escHtml(rd.name);
+        var safeRText = escHtml(rd.text);
+        var safeRNameJs = (rd.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g,'').replace(/>/g,'');
+        rEl.style.cssText = 'padding:10px 14px;background:var(--dark3);border:1px solid var(--border);margin-bottom:2px;';
+        rEl.innerHTML =
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+            (rd.avatar ? '<img src="' + escHtml(rd.avatar) + '" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);">' : '') +
+            '<span onclick="handleReplyRoleClick(\'' + d.id + '\',\'' + r.id + '\',\'' + safeRNameJs + '\')" style="font-family:Russo One,sans-serif;font-size:0.85rem;color:' + rColor + ';cursor:pointer;" title="Нажми 3 раза для роли">' + safeRName + '</span>' +
+            rBadge +
+            '<span style="font-family:IBM Plex Mono,monospace;font-size:0.55rem;color:var(--text-dim);">' + rDate + '</span>' +
+            '<button onclick="copyReplyIds(\'' + d.id + '\',\'' + r.id + '\')" style="font-family:IBM Plex Mono,monospace;font-size:0.5rem;color:#555;background:var(--dark);border:1px solid var(--border);cursor:pointer;padding:2px 6px;" title="Скопировать ID ответа">ID</button>' +
+          '</div>' +
+          '<p style="font-size:0.85rem;line-height:1.65;color:var(--text-dim);">' + safeRText + '</p>';
+        repliesEl.appendChild(rEl);
+      });
+    });
+    return card;
+  }
+
+  function copyReplyIds(commentId, replyId) {
+    copyId(commentId + ' / ' + replyId);
+  }
+
+  async function deleteReply() {
+    var commentId = document.getElementById('del-comment-id').value.trim();
+    var replyId = document.getElementById('del-reply-id').value.trim();
+    var code = document.getElementById('del-reply-code').value.trim();
+    var status = document.getElementById('del-reply-status');
+    if (code !== '2288') { status.textContent = '// Неверный код'; status.style.color = 'var(--red)'; return; }
+    if (!commentId || !replyId) { status.textContent = '// Введи оба ID'; status.style.color = 'var(--red)'; return; }
+    try {
+      await db.collection('comments').doc(commentId).collection('replies').doc(replyId).delete();
+      document.getElementById('del-comment-id').value = '';
+      document.getElementById('del-reply-id').value = '';
+      document.getElementById('del-reply-code').value = '';
+      status.textContent = '// Удалено'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  var replyRoleClicks = {};
+  function handleReplyRoleClick(commentId, replyId, name) {
+    var key = commentId + '_' + replyId;
+    replyRoleClicks[key] = (replyRoleClicks[key] || 0) + 1;
+    if (replyRoleClicks[key] >= 3) {
+      replyRoleClicks[key] = 0;
+      var code = prompt('Введи код:');
+      if (code !== '2288') { alert('Неверный код'); return; }
+      var role = prompt('Роль (ADMIN, Moderator або Fake):');
+      if (role !== 'ADMIN' && role !== 'Moderator' && role !== 'Fake') { alert('Неверная роль'); return; }
+      db.collection('comments').doc(commentId).collection('replies').doc(replyId).update({ role: role })
+        .then(function() { alert('Роль установлена!'); });
+    }
+  }
+
+  db.collection('comments').orderBy('ts', 'desc').onSnapshot(function(snap) {
+    var list = document.getElementById('comments-list');
+    var replyWrap = document.getElementById('reply-form-wrap');
+    list.innerHTML = '';
+    if (snap.empty) {
+      list.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:0.75rem;color:var(--text-dim);padding:20px 0;">// Комментариев пока нет. Будь первым.</div>';
+      return;
+    }
+    snap.forEach(function(d) { list.appendChild(renderComment(d)); });
+    if (replyToId) {
+      var cel = document.getElementById('comment-' + replyToId);
+      if (cel) cel.after(replyWrap);
+    }
+  }, function(err) {
+    document.getElementById('comments-list').innerHTML =
+      '<div style="font-family:IBM Plex Mono,monospace;font-size:0.75rem;color:var(--red);padding:20px 0;">// Ошибка: ' + err.code + '</div>';
+  });
+</script>
+</body>
+</html>
