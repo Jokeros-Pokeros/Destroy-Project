@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРОФИЛЬ // ПРОЕКТ РАЗГРОМ</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Russo+One&family=IBM+Plex+Mono:wght@400;700&family=Noto+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-hot: #e74c3c;
+    --dark: #0a0a0a;
+    --dark2: #111111;
+    --dark3: #1a1a1a;
+    --khaki: #4a4a3a;
+    --khaki-light: #6b6b52;
+    --text: #d4d0c8;
+    --text-dim: #7a7870;
+    --accent: #c0392b;
+    --border: #2a2a2a;
+    --purple: #8b5cf6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Noto Sans', sans-serif;
+    overflow-x: hidden;
+    cursor: crosshair;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+  /* NAV */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(10,10,10,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: var(--red);
+    text-decoration: none;
+  }
+  .nav-back {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--red); }
+  .nav-back::before { content: '←'; }
+
+  /* LOADER */
+  #loader {
+    position: fixed;
+    inset: 0;
+    background: var(--dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity 0.4s;
+  }
+  .loader-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* NO AUTH */
+  #no-auth {
+    display: none;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    padding: 100px 40px;
+    text-align: center;
+  }
+  #no-auth h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--red);
+    letter-spacing: 4px;
+  }
+  #no-auth p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  /* MAIN LAYOUT */
+  #profile-wrap {
+    display: none;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 110px 40px 40px;
+    gap: 24px;
+    flex-direction: column;
+  }
+
+  /* PAGE LABEL */
+  .page-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .page-label::before { content: ''; display: block; width: 24px; height: 1px; background: var(--red); }
+
+  /* PROFILE CARD */
+  .profile-card {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    overflow: hidden;
+  }
+  .profile-card-header {
+    background: var(--dark3);
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: #e6a817; }
+  .dot-green { background: #27ae60; }
+  .profile-card-body {
+    padding: 32px 36px;
+    display: flex;
+    gap: 36px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  /* AVATAR AREA */
+  .avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .avatar-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 2px solid var(--red);
+    object-fit: cover;
+    display: block;
+    background: var(--dark3);
+  }
+  .avatar-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(192,57,43,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    color: #fff;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 8px;
+  }
+  .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+
+  /* PROFILE INFO */
+  .profile-info { flex: 1; min-width: 220px; }
+  .profile-nickname {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    line-height: 1;
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .profile-realname {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .profile-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border: 1px solid;
+  }
+  .badge-red { color: var(--red); border-color: var(--red); }
+  .badge-purple { color: var(--purple); border-color: var(--purple); }
+  .badge-green { color: #27ae60; border-color: #27ae60; }
+  .badge-yellow { color: #e6a817; border-color: #e6a817; }
+
+  .profile-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .meta-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    color: var(--red);
+    line-height: 1;
+  }
+  .meta-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* EDIT NICK SECTION */
+  .edit-section {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--purple);
+    overflow: hidden;
+  }
+  .edit-section-header {
+    background: var(--dark3);
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--purple);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .edit-section-body { padding: 28px 36px; display: flex; flex-direction: column; gap: 20px; }
+
+  .field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .field-input {
+    width: 100%;
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    max-width: 400px;
+    display: block;
+  }
+  .field-input:focus { border-color: var(--purple); }
+  .field-hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 5px;
+  }
+
+  .field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .btn {
+    font-family: 'Russo One', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding: 10px 22px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-red:hover { background: var(--red-hot); }
+  .btn-purple { background: var(--purple); color: #fff; }
+  .btn-purple:hover { background: #7c3aed; }
+  .btn-outline {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { color: var(--red); border-color: var(--red); }
+
+  .save-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    align-self: center;
+  }
+
+  /* AVATAR URL FORM */
+  .avatar-url-wrap {
+    display: none;
+    margin-top: 12px;
+  }
+  .avatar-url-wrap.open { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .avatar-preview-small {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* COMMENTS HISTORY */
+  .history-section {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--khaki-light);
+    overflow: hidden;
+  }
+  .history-header {
+    background: var(--dark3);
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--khaki-light);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .history-count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--red);
+  }
+  .history-body { padding: 24px 36px; }
+
+  .hist-comment {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--khaki);
+    padding: 16px 20px;
+    margin-bottom: 4px;
+    background: var(--dark3);
+    transition: border-left-color 0.2s;
+  }
+  .hist-comment:hover { border-left-color: var(--red); }
+  .hist-comment-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .hist-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .hist-stars {
+    font-size: 0.8rem;
+    color: var(--red);
+  }
+  .hist-text {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+  .hist-reply-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--purple);
+    border: 1px solid var(--purple);
+    padding: 1px 6px;
+    letter-spacing: 1px;
+  }
+  .hist-empty {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    padding: 20px 0;
+    letter-spacing: 1px;
+  }
+
+  /* TICKER */
+  .ticker-wrap {
+    background: var(--red);
+    overflow: hidden;
+    padding: 10px 0;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 99;
+  }
+  .ticker-inner {
+    display: flex;
+    width: max-content;
+    animation: ticker 25s linear infinite;
+  }
+  .ticker-item {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.85);
+    padding: 0 40px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ticker-item span { color: rgba(255,255,255,0.4); margin: 0 10px; }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeUp 0.5s ease forwards; }
+  .fade-in-d1 { animation: fadeUp 0.5s ease 0.1s forwards; opacity: 0; }
+  .fade-in-d2 { animation: fadeUp 0.5s ease 0.2s forwards; opacity: 0; }
+  .fade-in-d3 { animation: fadeUp 0.5s ease 0.3s forwards; opacity: 0; }
+
+  @media (max-width: 768px) {
+    .nav { padding: 14px 20px; }
+    #profile-wrap { padding: 90px 20px 40px; }
+    .profile-card-body { padding: 24px 20px; gap: 20px; }
+    .edit-section-body { padding: 20px; }
+    .history-body { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">РАЗГРОМ</a>
+  <a href="index.html" class="nav-back">НА ГЛАВНУЮ</a>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> ПРОФИЛЬ <span>/</span> ЛИЧНЫЙ КАБИНЕТ <span>/</span> SSB2 COALITION <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> ПРОФИЛЬ <span>/</span> ЛИЧНЫЙ КАБИНЕТ <span>/</span> SSB2 COALITION <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span></div>
+    <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> ПРОФИЛЬ <span>/</span> ЛИЧНЫЙ КАБИНЕТ <span>/</span> SSB2 COALITION <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> ПРОФИЛЬ <span>/</span> ЛИЧНЫЙ КАБИНЕТ <span>/</span> SSB2 COALITION <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span></div>
+  </div>
+</div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:6px;color:var(--red);">РАЗГРОМ</div>
+  <div class="loader-text">// ЗАГРУЗКА ПРОФИЛЯ...</div>
+</div>
+
+<!-- NO AUTH -->
+<div id="no-auth" style="display:none;flex-direction:column;">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--red);letter-spacing:4px;margin-bottom:12px;">// ДОСТУП ЗАКРЫТ</div>
+  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#fff;letter-spacing:2px;">НЕОБХОДИМА АВТОРИЗАЦИЯ</h2>
+  <p style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text-dim);letter-spacing:2px;margin-top:12px;">Войди через Google чтобы просматривать профиль</p>
+  <button onclick="handleAuth()" style="margin-top:24px;background:var(--red);color:#fff;border:none;font-family:'Russo One',sans-serif;font-size:0.9rem;letter-spacing:2px;padding:14px 32px;cursor:pointer;align-self:center;">ВОЙТИ ЧЕРЕЗ GOOGLE</button>
+</div>
+
+<!-- PROFILE -->
+<div id="profile-wrap">
+
+  <!-- Label -->
+  <div class="fade-in">
+    <div class="page-label">Личный кабинет</div>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,4rem);letter-spacing:2px;color:#fff;">ПРОФИЛЬ</h1>
+  </div>
+
+  <!-- PROFILE CARD -->
+  <div class="profile-card fade-in-d1">
+    <div class="profile-card-header">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span style="margin-left:8px;">// ДАННЫЕ УЧАСТНИКА</span>
+    </div>
+    <div class="profile-card-body">
+      <div class="avatar-wrap" onclick="toggleAvatarEdit()">
+        <img class="avatar-img" id="profile-avatar" src="" alt="avatar">
+        <div class="avatar-overlay">СМЕНИТЬ<br>АВАТАР</div>
+      </div>
+      <div class="profile-info">
+        <div class="profile-nickname" id="display-nickname">—</div>
+        <div class="profile-realname" id="display-realname">// Google: —</div>
+        <div class="profile-badges" id="display-badges"></div>
+        <div class="profile-meta">
+          <div class="meta-item">
+            <span class="meta-val" id="stat-comments">0</span>
+            <span class="meta-label">Комментариев</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-val" id="stat-replies">0</span>
+            <span class="meta-label">Ответов</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-val" id="stat-joined">—</span>
+            <span class="meta-label">В коалиции</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT SECTION -->
+  <div class="edit-section fade-in-d2">
+    <div class="edit-section-header">
+      <div class="dot" style="background:var(--purple);"></div>
+      <span>// РЕДАКТИРОВАТЬ ПРОФИЛЬ</span>
+    </div>
+    <div class="edit-section-body">
+
+      <!-- Nick -->
+      <div>
+        <label class="field-label">ИГРОВОЙ НИК</label>
+        <div class="field-row">
+          <input class="field-input" id="input-nick" type="text" placeholder="Твой ник в игре..." maxlength="24">
+          <button class="btn btn-purple" onclick="saveNick()">СОХРАНИТЬ НИК</button>
+          <span class="save-status" id="nick-status"></span>
+        </div>
+        <div class="field-hint">// Отображается вместо имени Google. Макс. 24 символа.</div>
+      </div>
+
+      <!-- Avatar URL -->
+      <div>
+        <label class="field-label">АВАТАРКА</label>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <img class="avatar-img" id="edit-avatar-preview" src="" style="width:48px;height:48px;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn-outline" onclick="useGoogleAvatar()">// Использовать аватар Google</button>
+            <button class="btn-outline" onclick="toggleUrlInput()">// Вставить ссылку на аватар</button>
+          </div>
+          <span class="save-status" id="avatar-status"></span>
+        </div>
+        <div class="avatar-url-wrap" id="avatar-url-wrap">
+          <input class="field-input" id="input-avatar-url" type="url" placeholder="https://..." style="flex:1;max-width:360px;" oninput="previewAvatarUrl(this.value)">
+          <img class="avatar-preview-small" id="url-preview-img" src="" style="display:none;">
+          <button class="btn btn-red" onclick="saveAvatarUrl()">СОХРАНИТЬ</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section fade-in-d3">
+    <div class="history-header">
+      <span>// ИСТОРИЯ КОММЕНТАРИЕВ</span>
+      <span class="history-count" id="history-count-label">0</span>
+    </div>
+    <div class="history-body">
+      <div id="history-list">
+        <div class="hist-empty">// Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyDOgHs3NpDpYCXYVzatU7URbGWPQatya3c",
+    authDomain: "destroy-project-1bab6.firebaseapp.com",
+    projectId: "destroy-project-1bab6",
+    storageBucket: "destroy-project-1bab6.firebasestorage.app",
+    messagingSenderId: "191445705847",
+    appId: "1:191445705847:web:c87ef6e9905b5c9c215272"
+  });
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  const ROLE_COLORS = { 'superadmin':'#e74c3c','ADMIN':'#e74c3c','Moderator':'#8b5cf6','Fake':'#f39c12','leader':'#27ae60' };
+  const ROLE_LABELS = { 'superadmin':'SUPER ADMIN','ADMIN':'ADMIN','Moderator':'MODERATOR','Fake':'FAKE','leader':'ЛИДЕР' };
+  const PERMANENT_ROLES = {
+    'JDH':         { role: 'ADMIN', color: '#e74c3c' },
+    'Joe Barbaro': { role: 'ADMIN', color: '#e74c3c' },
+  };
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function makeBadgeHtml(role) {
+    if (!role) return '';
+    var c = ROLE_COLORS[role] || '#fff';
+    var label = ROLE_LABELS[role] || role;
+    return '<span class="badge" style="color:'+c+';border-color:'+c+'">'+label+'</span>';
+  }
+
+  function getEffectiveRole(displayName, firestoreRole) {
+    var perm = PERMANENT_ROLES[displayName ? displayName.trim() : ''];
+    return perm ? perm.role : firestoreRole;
+  }
+
+  var currentUser = null;
+  var userData = null;
+  var googleAvatarUrl = '';
+  var avatarUrlInputOpen = false;
+
+  function hideLoader() {
+    var l = document.getElementById('loader');
+    l.style.opacity = '0';
+    setTimeout(function() { l.style.display = 'none'; }, 400);
+  }
+
+  function handleAuth() {
+    var provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(function(e) { alert('Ошибка: ' + e.message); });
+  }
+
+  auth.onAuthStateChanged(async function(user) {
+    if (!user) {
+      hideLoader();
+      document.getElementById('no-auth').style.display = 'flex';
+      return;
+    }
+    currentUser = user;
+    googleAvatarUrl = user.photoURL || '';
+
+    // Load user doc
+    var doc = await db.collection('users').doc(user.uid).get();
+    userData = doc.exists ? doc.data() : {};
+
+    // If first time, init doc
+    if (!doc.exists || !userData.joinedAt) {
+      await db.collection('users').doc(user.uid).set({
+        name: user.displayName,
+        email: user.email,
+        avatar: user.photoURL,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      var doc2 = await db.collection('users').doc(user.uid).get();
+      userData = doc2.data() || {};
+    }
+
+    // Update lastSeen
+    db.collection('users').doc(user.uid).update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+
+    renderProfile(user, userData);
+    loadHistory(user.uid);
+    hideLoader();
+    document.getElementById('profile-wrap').style.display = 'flex';
+  });
+
+  function renderProfile(user, data) {
+    var nick = data.nickname || user.displayName || '—';
+    var avatar = data.avatar || user.photoURL || '';
+    var role = getEffectiveRole(nick, data.role);
+
+    document.getElementById('display-nickname').textContent = nick;
+    document.getElementById('display-realname').textContent = '// Google: ' + (user.displayName || '—');
+    document.getElementById('profile-avatar').src = avatar;
+    document.getElementById('edit-avatar-preview').src = avatar;
+
+    // Badges
+    var badgesEl = document.getElementById('display-badges');
+    badgesEl.innerHTML = '';
+    if (role) badgesEl.innerHTML += makeBadgeHtml(role);
+    badgesEl.innerHTML += '<span class="badge badge-green">УЧАСТНИК</span>';
+
+    // Nick input prefill
+    document.getElementById('input-nick').value = data.nickname || '';
+
+    // Joined date
+    var joined = '—';
+    if (data.joinedAt && data.joinedAt.seconds) {
+      var d = new Date(data.joinedAt.seconds * 1000);
+      joined = d.toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' });
+    }
+    document.getElementById('stat-joined').textContent = joined;
+  }
+
+  async function loadHistory(uid) {
+    var list = document.getElementById('history-list');
+    list.innerHTML = '<div class="hist-empty">// Загрузка...</div>';
+
+    try {
+      // Comments by this user
+      var snap = await db.collection('comments').where('uid', '==', uid).orderBy('ts', 'desc').get();
+      var commentCount = snap.size;
+
+      // Count replies by this user across all comments (subcollection query)
+      // We fetch all replies from all comments — practical limit for small sites
+      var allCommentsSnap = await db.collection('comments').get();
+      var replyCount = 0;
+      var replyDocs = [];
+      var promises = [];
+      allCommentsSnap.forEach(function(c) {
+        promises.push(
+          db.collection('comments').doc(c.id).collection('replies').where('uid','==',uid).orderBy('ts','desc').get()
+            .then(function(rSnap) {
+              replyCount += rSnap.size;
+              rSnap.forEach(function(r) {
+                replyDocs.push({ type: 'reply', data: r.data(), parentId: c.id, parentName: (c.data().name || '') });
+              });
+            })
+        );
+      });
+      await Promise.all(promises);
+
+      document.getElementById('stat-comments').textContent = commentCount;
+      document.getElementById('stat-replies').textContent = replyCount;
+      document.getElementById('history-count-label').textContent = commentCount + replyCount;
+
+      // Merge and sort all
+      var items = [];
+      snap.forEach(function(d) {
+        items.push({ type: 'comment', data: d.data(), id: d.id });
+      });
+      replyDocs.forEach(function(r) {
+        items.push(r);
+      });
+      items.sort(function(a, b) {
+        var ta = a.data.ts ? a.data.ts.seconds : 0;
+        var tb = b.data.ts ? b.data.ts.seconds : 0;
+        return tb - ta;
+      });
+
+      if (items.length === 0) {
+        list.innerHTML = '<div class="hist-empty">// Ты ещё не оставлял комментариев. Иди на главную и выскажись.</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      items.forEach(function(item) {
+        var d = item.data;
+        var date = d.ts ? new Date(d.ts.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+        var el = document.createElement('div');
+        el.className = 'hist-comment';
+        var stars = item.type === 'comment' && d.rating
+          ? '<span class="hist-stars">' + '★'.repeat(d.rating) + '☆'.repeat(5 - d.rating) + '</span>'
+          : '';
+        var replyBadge = item.type === 'reply'
+          ? '<span class="hist-reply-badge">ОТВЕТ → ' + escHtml(item.parentName) + '</span>'
+          : '';
+        el.innerHTML =
+          '<div class="hist-comment-meta">' +
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+              stars + replyBadge +
+            '</div>' +
+            '<span class="hist-date">' + date + '</span>' +
+          '</div>' +
+          '<p class="hist-text">' + escHtml(d.text) + '</p>';
+        list.appendChild(el);
+      });
+    } catch(e) {
+      list.innerHTML = '<div class="hist-empty" style="color:var(--red);">// Ошибка загрузки: ' + e.code + '</div>';
+      console.error(e);
+    }
+  }
+
+  async function saveNick() {
+    var val = document.getElementById('input-nick').value.trim();
+    var status = document.getElementById('nick-status');
+    if (!val) { status.textContent = '// Введи ник'; status.style.color = 'var(--red)'; return; }
+    if (val.length > 24) { status.textContent = '// Слишком длинный'; status.style.color = 'var(--red)'; return; }
+    try {
+      await db.collection('users').doc(currentUser.uid).update({ nickname: val });
+      userData.nickname = val;
+      document.getElementById('display-nickname').textContent = val;
+      status.textContent = '// Сохранено ✓'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) {
+      status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)';
+    }
+  }
+
+  function toggleAvatarEdit() {
+    toggleUrlInput();
+  }
+
+  function toggleUrlInput() {
+    avatarUrlInputOpen = !avatarUrlInputOpen;
+    var wrap = document.getElementById('avatar-url-wrap');
+    wrap.className = 'avatar-url-wrap' + (avatarUrlInputOpen ? ' open' : '');
+  }
+
+  function previewAvatarUrl(url) {
+    var img = document.getElementById('url-preview-img');
+    if (url.startsWith('http')) {
+      img.src = url; img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+    }
+  }
+
+  async function saveAvatarUrl() {
+    var url = document.getElementById('input-avatar-url').value.trim();
+    var status = document.getElementById('avatar-status');
+    if (!url.startsWith('http')) { status.textContent = '// Неверная ссылка'; status.style.color='var(--red)'; return; }
+    try {
+      await db.collection('users').doc(currentUser.uid).update({ avatar: url });
+      document.getElementById('profile-avatar').src = url;
+      document.getElementById('edit-avatar-preview').src = url;
+      userData.avatar = url;
+      status.textContent = '// Аватар обновлён ✓'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) {
+      status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)';
+    }
+  }
+
+  async function useGoogleAvatar() {
+    var status = document.getElementById('avatar-status');
+    if (!googleAvatarUrl) { status.textContent = '// Нет аватара Google'; status.style.color='var(--red)'; return; }
+    try {
+      await db.collection('users').doc(currentUser.uid).update({ avatar: googleAvatarUrl });
+      document.getElementById('profile-avatar').src = googleAvatarUrl;
+      document.getElementById('edit-avatar-preview').src = googleAvatarUrl;
+      userData.avatar = googleAvatarUrl;
+      status.textContent = '// Аватар Google установлен ✓'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) {
+      status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)';
+    }
+  }
+</script>
+</body>
+</html>
