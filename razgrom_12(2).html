@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПРОЕКТ РАЗГРОМ</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Russo+One&family=IBM+Plex+Mono:wght@400;700&family=Noto+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b;
+    --red-hot: #e74c3c;
+    --dark: #0a0a0a;
+    --dark2: #111111;
+    --dark3: #1a1a1a;
+    --khaki: #4a4a3a;
+    --khaki-light: #6b6b52;
+    --text: #d4d0c8;
+    --text-dim: #7a7870;
+    --accent: #c0392b;
+    --border: #2a2a2a;
+    --purple: #8b5cf6;
+    --green: #27ae60;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Noto Sans', sans-serif;
+    overflow-x: hidden;
+    cursor: crosshair;
+    padding-bottom: 40px;
+  }
+
+  /* Grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* ===== NAV ===== */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(10,10,10,0.97);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: var(--red);
+    cursor: pointer;
+  }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--red); }
+
+  /* Burger */
+  .burger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 4px;
+    background: none;
+    border: none;
+  }
+  .burger span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text);
+    transition: all 0.3s;
+  }
+  .burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .burger.open span:nth-child(2) { opacity: 0; }
+  .burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* Mobile menu */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 57px; left: 0; right: 0;
+    background: rgba(10,10,10,0.99);
+    border-bottom: 1px solid var(--border);
+    z-index: 199;
+    padding: 20px;
+    flex-direction: column;
+    gap: 0;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a {
+    display: block;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    transition: color 0.2s;
+  }
+  .mobile-menu a:hover { color: var(--red); }
+
+  /* Auth */
+  #auth-btn-wrap { display: flex; align-items: center; gap: 12px; }
+  #user-info { display: none; align-items: center; gap: 10px; }
+  #auth-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    padding: 7px 16px;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  #auth-btn:hover { background: var(--red); color: #fff; }
+
+  /* ===== HERO ===== */
+  header {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 40px 80px;
+    overflow: hidden;
+    background: var(--dark);
+  }
+  .header-bg-lines {
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(192,57,43,0.06) 60px),
+      repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(192,57,43,0.04) 60px);
+    pointer-events: none;
+  }
+  .header-diagonal {
+    position: absolute;
+    top: 0; right: 0;
+    width: 45%; height: 100%;
+    background: linear-gradient(135deg, transparent 30%, rgba(192,57,43,0.07) 100%);
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+    pointer-events: none;
+  }
+  .classified-stamp {
+    position: absolute;
+    top: 40px; right: 60px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--red);
+    border: 4px solid var(--red);
+    padding: 6px 20px;
+    transform: rotate(12deg);
+    opacity: 0.35;
+    letter-spacing: 6px;
+    pointer-events: none;
+  }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 14vw, 13rem);
+    line-height: 0.88;
+    letter-spacing: 2px;
+    color: #fff;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.4s;
+  }
+  .hero-title span { color: var(--red); }
+  .hero-subtitle {
+    font-family: 'Russo One', sans-serif;
+    font-size: clamp(1.1rem, 2.5vw, 1.8rem);
+    color: var(--text-dim);
+    margin-top: 20px;
+    letter-spacing: 2px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.6s;
+  }
+  .hero-counter-row {
+    display: flex;
+    gap: 48px;
+    margin-top: 60px;
+    margin-bottom: 60px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.8s;
+  }
+  .hero-stat { display: flex; flex-direction: column; gap: 4px; }
+  .hero-stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--red);
+  }
+  .hero-stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .hero-divider { width: 1px; background: var(--border); align-self: stretch; }
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px; left: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 1.2s;
+  }
+  .scroll-hint::before {
+    content: '';
+    display: block;
+    width: 40px; height: 1px;
+    background: var(--red);
+    animation: expandLine 1.5s ease infinite;
+  }
+  @keyframes expandLine {
+    0%, 100% { width: 40px; opacity: 1; }
+    50% { width: 20px; opacity: 0.4; }
+  }
+
+  /* ===== SECTIONS ===== */
+  section {
+    padding: 100px 40px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 24px; height: 1px;
+    background: var(--red);
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 50px;
+  }
+
+  /* ===== MANIFESTO ===== */
+  .manifesto-wrap {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    position: relative;
+    overflow: hidden;
+  }
+  .manifesto-header {
+    background: var(--dark3);
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: #e6a817; }
+  .dot-green { background: #27ae60; }
+  .manifesto-body { padding: 40px; }
+  .manifesto-intro {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+  }
+  .manifesto-block { margin-bottom: 36px; }
+  .manifesto-block h3 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1rem;
+    color: var(--red);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .manifesto-block h3::before {
+    content: attr(data-num);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+  }
+  .manifesto-block p, .manifesto-block ul {
+    font-size: 0.95rem;
+    line-height: 1.9;
+    color: var(--text-dim);
+  }
+  .manifesto-block ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .manifesto-block ul li::before {
+    content: '//';
+    color: var(--red);
+    margin-right: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* ===== CLANS ===== */
+  .clans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 2px;
+  }
+  .clan-card {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, background 0.25s;
+    cursor: default;
+  }
+  .clan-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 0%;
+    background: var(--red);
+    transition: height 0.3s ease;
+  }
+  .clan-card:hover { border-color: var(--khaki-light); background: var(--dark3); }
+  .clan-card:hover::before { height: 100%; }
+  .clan-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+  .clan-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    color: #fff;
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+  .clan-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+  .clan-bar-wrap { margin-bottom: 10px; }
+  .clan-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .clan-bar-bg { height: 3px; background: var(--border); position: relative; }
+  .clan-bar-fill {
+    height: 100%;
+    background: var(--red);
+    transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+  .clan-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--red);
+    line-height: 1;
+    margin-top: 16px;
+  }
+  .clan-num-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+  .clan-leader {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    letter-spacing: 1px;
+  }
+  .clan-leader span { color: var(--green); }
+
+  /* ===== COUNTER ===== */
+  .counter-section {
+    background: var(--dark2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .counter-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(192,57,43,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .counter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .counter-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(6rem, 18vw, 14rem);
+    line-height: 0.9;
+    color: var(--red);
+    text-shadow: 0 0 80px rgba(192,57,43,0.3);
+    display: block;
+  }
+  .counter-sub {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-top: 20px;
+  }
+  .target-wrap {
+    margin-top: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border);
+    padding: 14px 28px;
+    background: var(--dark3);
+  }
+  .target-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .progress-bar-bg { width: 200px; height: 4px; background: var(--border); position: relative; }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--red);
+    position: relative;
+    transition: width 1.5s ease;
+  }
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: -1px; top: -3px;
+    width: 10px; height: 10px;
+    background: var(--red);
+    border-radius: 50%;
+  }
+  .target-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--red);
+  }
+
+  /* ===== GOALS ===== */
+  .goals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .goal-item {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    padding: 32px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .goal-item:hover { background: var(--dark3); }
+  .goal-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+  .goal-title {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.05rem;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  .goal-text { font-size: 0.9rem; line-height: 1.75; color: var(--text-dim); }
+
+  /* ===== TICKER ===== */
+  .ticker-wrap {
+    background: var(--red);
+    overflow: hidden;
+    padding: 10px 0;
+    position: relative;
+  }
+  .ticker-inner { display: flex; width: max-content; animation: ticker 25s linear infinite; }
+  .ticker-item {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.85);
+    padding: 0 40px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ticker-item span { color: rgba(255,255,255,0.4); margin: 0 10px; }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ===== FOOTER ===== */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--dark);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    color: var(--red);
+  }
+  .footer-copy {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  /* ===== PROFILE MODAL ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--red);
+    max-width: 480px;
+    width: 100%;
+    position: relative;
+    animation: fadeUp 0.3s ease;
+  }
+  .modal-header {
+    background: var(--dark3);
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--red); }
+  .modal-body { padding: 28px 24px; }
+
+  .profile-avatar-big {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--red);
+    display: block;
+    margin: 0 auto 20px;
+  }
+  .profile-display-name {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.2rem;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .profile-username {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--red);
+    text-align: center;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  .profile-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .profile-stat { text-align: center; }
+  .profile-stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--red);
+    display: block;
+  }
+  .profile-stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .form-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--red); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .btn-red {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    font-family: 'Russo One', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    padding: 11px 24px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-red:hover { opacity: 0.85; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover { color: var(--red); border-color: var(--red); }
+
+  /* ===== COMMENTS ===== */
+  #comments { background: var(--dark); border-top: 1px solid var(--border); padding-bottom: 80px; }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 768px) {
+    .nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .burger { display: flex; }
+    #auth-btn-wrap { gap: 8px; }
+    #user-info { gap: 6px; }
+    #user-avatar-nav { width: 24px !important; height: 24px !important; }
+    #user-name { display: none; }
+    #auth-btn { padding: 6px 12px; font-size: 0.6rem; }
+
+    header { padding: 90px 20px 80px; }
+    section { padding: 60px 20px; }
+    .hero-title { font-size: clamp(3.5rem, 18vw, 7rem); }
+    .hero-subtitle { font-size: 0.95rem; }
+    .hero-counter-row { gap: 16px; flex-wrap: wrap; margin-bottom: 40px; }
+    .hero-stat-num { font-size: 2.2rem; }
+    .classified-stamp { display: none; }
+    .scroll-hint { left: 20px; }
+
+    .goals-grid { grid-template-columns: 1fr; }
+    .clans-grid { grid-template-columns: 1fr; }
+
+    .manifesto-body { padding: 20px 16px; }
+    .manifesto-header { padding: 12px 16px; }
+
+    .counter-section { padding: 60px 20px; }
+    .target-wrap { flex-wrap: wrap; justify-content: center; padding: 12px 16px; gap: 10px; }
+    .progress-bar-bg { width: 140px; }
+    .section-title { font-size: clamp(2rem, 8vw, 3.5rem); margin-bottom: 30px; }
+
+    footer { flex-direction: column; text-align: center; padding: 30px 20px; }
+
+    .profile-stats { gap: 20px; }
+    .modal-box { margin: 10px; }
+    .goals-grid .goal-item { padding: 24px 20px; }
+  }
+  @media (max-width: 480px) {
+    .hero-counter-row { gap: 12px; }
+    .hero-stat-num { font-size: 2rem; }
+    .hero-divider { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">РАЗГРОМ</div>
+  <ul class="nav-links">
+    <li><a href="#manifesto">Манифест</a></li>
+    <li><a href="#clans">Коалиция</a></li>
+    <li><a href="#goals">Цели</a></li>
+    <li><a href="#comments">Комментарии</a></li>
+  </ul>
+  <div id="auth-btn-wrap">
+    <div id="user-info" style="align-items:center;gap:8px;">
+      <img id="user-avatar-nav" src="" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--red);cursor:pointer;" title="Профиль" onclick="openProfileModal()">
+      <span id="user-name" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text);letter-spacing:1px;cursor:pointer;" onclick="openProfileModal()"></span>
+      <span id="user-role-badge"></span>
+    </div>
+    <button id="auth-btn" onclick="handleAuth()">ВОЙТИ</button>
+  </div>
+  <button class="burger" id="burger" onclick="toggleMobileMenu()" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#manifesto" onclick="closeMobileMenu()">Манифест</a>
+  <a href="#clans" onclick="closeMobileMenu()">Коалиция</a>
+  <a href="#goals" onclick="closeMobileMenu()">Цели</a>
+  <a href="#comments" onclick="closeMobileMenu()">Комментарии</a>
+  <a href="#" onclick="closeMobileMenu();openProfileModal();" style="color:var(--purple);border-color:var(--purple);">// Мой профиль</a>
+</div>
+
+<!-- TICKER -->
+<div style="position:fixed; bottom:0; left:0; right:0; z-index:99;">
+  <div class="ticker-wrap">
+    <div class="ticker-inner">
+      <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> <span id="ticker-count">320</span> УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> <span id="ticker-count2">320</span> УЧАСТНИКОВ <span>/</span> ЦЕЛЬ 500 <span>/</span></div>
+      <div class="ticker-item">ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span> ПРОЕКТ РАЗГРОМ <span>/</span> КОАЛИЦИЯ АКТИВНА <span>/</span> SSB2 <span>/</span> SSB2MA <span>/</span> ЕДИНЫЙ ФРОНТ <span>/</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<header>
+  <div class="header-bg-lines"></div>
+  <div class="header-diagonal"></div>
+  <div class="classified-stamp">CLASSIFIED</div>
+  <div class="hero-tag">// SSB2 / SSB2MA / 2025</div>
+  <h1 class="hero-title">ПРОЕКТ<br><span>РАЗГРОМ</span></h1>
+  <p class="hero-subtitle">Единый Фронт. Стратегия стабилизации SSB2</p>
+  <div class="hero-counter-row">
+    <div class="hero-stat">
+      <span class="hero-stat-num" id="hero-total">320</span>
+      <span class="hero-stat-label">Участников</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <span class="hero-stat-num" id="hero-factions">5</span>
+      <span class="hero-stat-label">Фракций</span>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-stat">
+      <span class="hero-stat-num">500</span>
+      <span class="hero-stat-label">Цель</span>
+    </div>
+  </div>
+  <div class="scroll-hint">SCROLL DOWN</div>
+</header>
+
+<!-- MANIFESTO -->
+<div id="manifesto" style="background:var(--dark2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <section>
+    <div class="section-label">Манифест</div>
+    <h2 class="section-title">ПОЧЕМУ МЫ ЗДЕСЬ</h2>
+    <div class="manifesto-wrap reveal">
+      <div class="manifesto-header">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <span style="margin-left:8px;">// МАНИФЕСТ</span>
+      </div>
+      <div class="manifesto-body">
+        <p class="manifesto-intro">
+          Ждать когда нам дадут нормальные обновления? Нет. Игра гниёт: читеры, донат вместо контента,
+          разработчик молчит. Мы собрались сами. Не ради войны, а ради того чтобы нас услышали.
+        </p>
+        <div class="manifesto-block">
+          <h3 data-num="01">Главная цель</h3>
+          <p>Собрать 500+ активных игроков в единую коалицию. Когда мы дойдём до этой отметки,
+          разработчик окажется перед простым выбором: работать с нами или смотреть как его игра пустеет.
+          Молчание больше не работает в одну сторону.</p>
+        </div>
+        <div class="manifesto-block">
+          <h3 data-num="02">Как устроена коалиция</h3>
+          <ul>
+            <li>Лидеры кланов управляют своими проектами и несут ответственность за свою часть</li>
+            <li>Все кланы под одним вектором, без потери своей идентичности</li>
+            <li>Мелкие проекты не поглощаются, а входят на равных</li>
+          </ul>
+        </div>
+        <div class="manifesto-block">
+          <h3 data-num="03">Ближайший план</h3>
+          <ul>
+            <li>Агрессивный рост через ивенты и активность внутри SSB2 / SSB2MA</li>
+            <li>Объединение малых серверов и сообществ под общим флагом</li>
+            <li>Стереть границу между SSB2 и SSB2MA, сделать одно общее комьюнити</li>
+          </ul>
+        </div>
+        <div class="manifesto-block">
+          <h3 data-num="04">Что будет на 500+</h3>
+          <ul>
+            <li>Блокировка официального трафика и переключение аудитории на наши ресурсы</li>
+            <li>Коллективный ультиматум с конкретными требованиями по обновлениям</li>
+            <li>Если ответа нет, активное комьюнити уходит целиком и разом</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- COUNTER -->
+<div class="counter-section">
+  <p class="counter-label">// Общее число участников коалиции</p>
+  <span class="counter-main" id="big-counter">320</span>
+  <p class="counter-sub">УЧАСТНИКОВ В СТРОЮ</p>
+  <div class="target-wrap">
+    <span class="target-label">ПРОГРЕСС К ЦЕЛИ 500</span>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <span class="target-num" id="progress-pct">0%</span>
+  </div>
+</div>
+
+<!-- CLANS -->
+<div id="clans">
+  <section>
+    <div class="section-label">Состав</div>
+    <h2 class="section-title">ФРАКЦИИ КОАЛИЦИИ</h2>
+    <div class="clans-grid" id="clans-grid"></div>
+  </section>
+</div>
+
+<!-- GOALS -->
+<div id="goals" style="background:var(--dark2);border-top:1px solid var(--border);">
+  <section>
+    <div class="section-label">Требования</div>
+    <h2 class="section-title">НАШИ ЦЕЛИ</h2>
+    <div class="goals-grid reveal">
+      <div class="goal-item">
+        <div class="goal-num">// 01</div>
+        <div class="goal-title">Рабочий Античит</div>
+        <p class="goal-text">Читеры уничтожают игру быстрее чем любой кризис контента. Без нормального античита разговор о росте онлайна бессмысленный.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 02</div>
+        <div class="goal-title">Меньше Доната, Больше Контента</div>
+        <p class="goal-text">Раз в месяц скин пак не обновление. Хотим механики, ивенты, реальные изменения в геймплее, а не очередной военный паёк за реальные деньги.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 03</div>
+        <div class="goal-title">Диалог с Разработчиком</div>
+        <p class="goal-text">Просто говорить с комьюнити. Не раз в полгода в Telegram, а реально слышать что происходит и что планируется.</p>
+      </div>
+      <div class="goal-item">
+        <div class="goal-num">// 04</div>
+        <div class="goal-title">Обновления по Идеям Игроков</div>
+        <p class="goal-text">Комьюнити годами просит определённые вещи. Мы хотим механизм где голос игрока реально влияет на что добавят в игру.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- COMMENTS -->
+<div id="comments">
+  <section>
+    <div class="section-label">Голос комьюнити</div>
+    <h2 class="section-title">КОММЕНТАРИИ</h2>
+
+    <div class="manifesto-wrap reveal" style="margin-bottom:28px;">
+      <div class="manifesto-header">
+        <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
+        <span style="margin-left:8px;">// КОММЕНТАРИЙ</span>
+      </div>
+      <div class="manifesto-body" style="padding:24px 28px;">
+        <div id="comment-auth-status" style="margin-bottom:16px;padding:10px 14px;background:var(--dark);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text-dim);">
+          // Войди через Google чтобы оставить комментарий
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="form-label">ОЦЕНКА</label>
+          <div style="display:flex;gap:6px;">
+            <span onclick="setRating(1)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(2)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(3)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(4)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+            <span onclick="setRating(5)" style="font-size:1.5rem;cursor:pointer;color:var(--border);" class="star">★</span>
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="form-label">СООБЩЕНИЕ</label>
+          <textarea id="c-text" placeholder="Твоё мнение о проекте..." rows="3" class="form-input" style="resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <button onclick="submitComment()" class="btn-red">ОТПРАВИТЬ</button>
+          <span id="c-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модерация — только для залогиненных админов, без пароля в HTML -->
+    <div id="mod-panel" style="display:none;margin-bottom:28px;">
+      <details>
+        <summary style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);letter-spacing:2px;cursor:pointer;user-select:none;">// МОДЕРАЦИЯ (ADMIN)</summary>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);width:120px;letter-spacing:1px;">Комментарий:</span>
+            <input id="del-id" type="text" placeholder="ID комментария..." class="form-input" style="width:200px;margin:0;">
+            <button onclick="deleteComment()" class="btn-ghost" style="color:var(--red);border-color:var(--red);">УДАЛИТЬ</button>
+            <span id="del-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--text-dim);width:120px;letter-spacing:1px;">Ответ:</span>
+            <input id="del-comment-id" type="text" placeholder="ID комментария..." class="form-input" style="width:180px;margin:0;">
+            <input id="del-reply-id" type="text" placeholder="ID ответа..." class="form-input" style="width:160px;margin:0;">
+            <button onclick="deleteReply()" class="btn-ghost" style="color:var(--red);border-color:var(--red);">УДАЛИТЬ</button>
+            <span id="del-reply-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div id="reply-form-wrap" style="display:none;margin-bottom:12px;padding:16px;background:var(--dark3);border:1px solid var(--border);border-left:3px solid var(--purple);">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--purple);margin-bottom:10px;" id="reply-to-label">// Ответ на комментарий</div>
+      <textarea id="r-text" placeholder="Твой ответ..." rows="2" class="form-input" style="resize:vertical;margin-bottom:10px;"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button onclick="submitReply()" style="background:var(--purple);color:#fff;border:none;font-family:'Russo One',sans-serif;font-size:0.8rem;letter-spacing:2px;padding:10px 22px;cursor:pointer;">ОТВЕТИТЬ</button>
+        <button onclick="closeReplyForm()" class="btn-ghost">ОТМЕНА</button>
+        <span id="r-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);"></span>
+      </div>
+    </div>
+
+    <div id="comments-list" style="display:flex;flex-direction:column;gap:4px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--text-dim);padding:20px 0;">Загрузка...</div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="footer-logo">РАЗГРОМ</div>
+  <div class="footer-copy">// SSB2 COALITION // ЕДИНЫЙ ФРОНТ // 2025</div>
+  <div style="width:100%;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:0.5rem;color:#333;letter-spacing:1px;">Используя сайт, вы соглашаетесь с тем, что при отправке комментариев могут собираться технические данные (браузер, дата, время).</div>
+</footer>
+
+<!-- PROFILE MODAL -->
+<div class="modal-overlay" id="profile-modal" onclick="closeProfileOnOverlay(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>// ПРОФИЛЬ</span>
+      <button class="modal-close" onclick="closeProfileModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <img id="modal-avatar" src="" class="profile-avatar-big" alt="">
+      <div class="profile-display-name" id="modal-display-name">—</div>
+      <div class="profile-username" id="modal-username">@—</div>
+      <div id="modal-role-badge" style="text-align:center;margin-bottom:16px;"></div>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-num" id="modal-comments-count">0</span>
+          <span class="profile-stat-label">Комментариев</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-num" id="modal-joined">—</span>
+          <span class="profile-stat-label">Дата входа</span>
+        </div>
+      </div>
+
+      <label class="form-label">НИКНЕЙМ В КОАЛИЦИИ</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div style="position:relative;flex:1;">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:0.85rem;">@</span>
+          <input id="modal-username-input" type="text" placeholder="username" class="form-input" style="padding-left:28px;margin:0;" maxlength="24">
+        </div>
+        <button onclick="saveUsername()" class="btn-red" style="white-space:nowrap;">СОХРАНИТЬ</button>
+      </div>
+      <div id="modal-username-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--text-dim);margin-bottom:16px;min-height:16px;"></div>
+
+      <label class="form-label">EMAIL (только ты видишь)</label>
+      <div class="form-input" id="modal-email" style="color:var(--text-dim);cursor:default;margin-bottom:20px;"></div>
+
+      <button onclick="handleAuth()" class="btn-ghost" style="width:100%;text-align:center;">// ВЫЙТИ ИЗ АККАУНТА</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== FIREBASE =====
+  firebase.initializeApp({
+    apiKey: "AIzaSyDOgHs3NpDpYCXYVzatU7URbGWPQatya3c",
+    authDomain: "destroy-project-1bab6.firebaseapp.com",
+    projectId: "destroy-project-1bab6",
+    storageBucket: "destroy-project-1bab6.firebasestorage.app",
+    messagingSenderId: "191445705847",
+    appId: "1:191445705847:web:c87ef6e9905b5c9c215272"
+  });
+
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  var currentUser = null;
+  var currentUserRole = null;
+  var currentUserDoc = null;
+  var currentRating = 0;
+  var replyToId = null;
+  var replyToName = null;
+  const SPAM_DELAY = 60;
+
+  // UID'ы супер-админов — заполни после первого входа (console.log выведет твой uid)
+  const SUPER_ADMINS = [];
+
+  // Постоянные роли по Google display name
+  const PERMANENT_ROLES = {
+    'JDH':         { role: 'ADMIN', color: '#e74c3c' },
+    'Joe Barbaro': { role: 'ADMIN', color: '#e74c3c' },
+  };
+
+  const ROLE_COLORS  = { 'superadmin':'#e74c3c','ADMIN':'#e74c3c','Moderator':'#8b5cf6','Fake':'#f39c12','leader':'#27ae60' };
+  const ROLE_LABELS  = { 'superadmin':'SUPER ADMIN','ADMIN':'ADMIN','Moderator':'Moderator','Fake':'Fake','leader':'Лидер' };
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function makeBadge(role) {
+    if (!role) return '';
+    var c = ROLE_COLORS[role] || '#fff';
+    var label = ROLE_LABELS[role] || role;
+    return '<span style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;font-weight:700;color:'+c+';border:1px solid '+c+';padding:1px 6px;letter-spacing:1px;margin-left:4px;">'+label+'</span>';
+  }
+
+  function getPermRole(name) { return PERMANENT_ROLES[(name||'').trim()] || null; }
+
+  function getRoleBadge(name, fbRole) {
+    var p = getPermRole(name);
+    return makeBadge(p ? p.role : fbRole);
+  }
+  function getNameColor(name, fbRole) {
+    var p = getPermRole(name);
+    return p ? p.color : (ROLE_COLORS[fbRole] || '#fff');
+  }
+
+  // Можно ли модерировать (admin/superadmin)
+  function canModerate() {
+    return currentUserRole === 'ADMIN' || currentUserRole === 'superadmin' ||
+           (currentUser && getPermRole(currentUser.displayName) !== null);
+  }
+
+  // ===== MOBILE MENU =====
+  function toggleMobileMenu() {
+    var m = document.getElementById('mobile-menu');
+    var b = document.getElementById('burger');
+    m.classList.toggle('open');
+    b.classList.toggle('open');
+  }
+  function closeMobileMenu() {
+    document.getElementById('mobile-menu').classList.remove('open');
+    document.getElementById('burger').classList.remove('open');
+  }
+
+  // ===== AUTH =====
+  function handleAuth() {
+    if (currentUser) {
+      if (confirm('Выйти из аккаунта?')) auth.signOut().then(function() { closeProfileModal(); });
+    } else {
+      var provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(function(e) { alert('Ошибка входа: ' + e.message); });
+    }
+  }
+
+  auth.onAuthStateChanged(function(user) {
+    currentUser = user;
+    if (user) {
+      console.log('Твой uid:', user.uid);
+      // Сохраняем/обновляем профиль
+      db.collection('users').doc(user.uid).set({
+        displayName: user.displayName,
+        email: user.email,
+        avatar: user.photoURL,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      // Определяем роль
+      if (SUPER_ADMINS.includes(user.uid)) {
+        currentUserRole = 'superadmin';
+        finishAuthUI(user);
+      } else {
+        db.collection('users').doc(user.uid).get().then(function(doc) {
+          currentUserDoc = doc.exists ? doc.data() : {};
+          currentUserRole = (doc.exists && doc.data().role) ? doc.data().role : null;
+          finishAuthUI(user);
+        });
+      }
+    } else {
+      currentUserRole = null;
+      currentUserDoc = null;
+      document.getElementById('user-info').style.display = 'none';
+      document.getElementById('auth-btn').textContent = 'ВОЙТИ';
+      document.getElementById('mod-panel').style.display = 'none';
+    }
+  });
+
+  function finishAuthUI(user) {
+    var info = document.getElementById('user-info');
+    info.style.display = 'flex';
+    document.getElementById('user-avatar-nav').src = user.photoURL || '';
+    var uname = (currentUserDoc && currentUserDoc.username) ? '@' + currentUserDoc.username : user.displayName;
+    document.getElementById('user-name').textContent = uname;
+    document.getElementById('user-role-badge').innerHTML = currentUserRole ? makeBadge(currentUserRole) : '';
+    document.getElementById('auth-btn').textContent = 'ВЫЙТИ';
+
+    if (canModerate()) document.getElementById('mod-panel').style.display = 'block';
+
+    var authStatus = document.getElementById('comment-auth-status');
+    if (authStatus) {
+      authStatus.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<img src="'+escHtml(user.photoURL||'')+'" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--red);">' +
+          '<span style="color:var(--text);">'+escHtml(uname)+'</span>' +
+          (currentUserRole ? makeBadge(currentUserRole) : '') +
+          '<span style="color:#27ae60;margin-left:auto;">// Авторизован</span>' +
+        '</div>';
+      authStatus.style.borderColor = '#27ae60';
+    }
+  }
+
+  // ===== PROFILE MODAL =====
+  function openProfileModal() {
+    if (!currentUser) { handleAuth(); return; }
+    var modal = document.getElementById('profile-modal');
+    modal.classList.add('open');
+
+    document.getElementById('modal-avatar').src = currentUser.photoURL || '';
+    document.getElementById('modal-display-name').textContent = currentUser.displayName || '—';
+    document.getElementById('modal-email').textContent = currentUser.email || '—';
+
+    var ud = currentUserDoc || {};
+    var uname = ud.username ? '@' + ud.username : '—';
+    document.getElementById('modal-username').textContent = uname;
+    document.getElementById('modal-username-input').value = ud.username || '';
+    document.getElementById('modal-role-badge').innerHTML = currentUserRole ? makeBadge(currentUserRole) : '';
+
+    // Дата регистрации
+    var joined = ud.createdAt ? new Date(ud.createdAt.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+    document.getElementById('modal-joined').textContent = joined;
+
+    // Считаем комментарии
+    db.collection('comments').where('uid','==',currentUser.uid).get().then(function(snap) {
+      document.getElementById('modal-comments-count').textContent = snap.size;
+    });
+  }
+
+  function closeProfileModal() {
+    document.getElementById('profile-modal').classList.remove('open');
+    document.getElementById('modal-username-status').textContent = '';
+  }
+
+  function closeProfileOnOverlay(e) {
+    if (e.target === document.getElementById('profile-modal')) closeProfileModal();
+  }
+
+  async function saveUsername() {
+    if (!currentUser) return;
+    var val = document.getElementById('modal-username-input').value.trim();
+    var status = document.getElementById('modal-username-status');
+    if (!val) { status.textContent = '// Введи никнейм'; status.style.color = 'var(--red)'; return; }
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(val)) {
+      status.textContent = '// Только латиница, цифры, _ (3-24 символа)';
+      status.style.color = 'var(--red)'; return;
+    }
+    status.textContent = '// Проверка...'; status.style.color = 'var(--text-dim)';
+
+    // Проверяем уникальность
+    try {
+      var check = await db.collection('users').where('username','==',val.toLowerCase()).get();
+      var alreadyMine = false;
+      check.forEach(function(d) { if (d.id === currentUser.uid) alreadyMine = true; });
+      if (!check.empty && !alreadyMine) {
+        status.textContent = '// Никнейм занят, выбери другой'; status.style.color = 'var(--red)'; return;
+      }
+      await db.collection('users').doc(currentUser.uid).set({
+        username: val.toLowerCase(),
+        createdAt: currentUserDoc && currentUserDoc.createdAt ? currentUserDoc.createdAt : firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      currentUserDoc = Object.assign({}, currentUserDoc, { username: val.toLowerCase() });
+      document.getElementById('modal-username').textContent = '@' + val.toLowerCase();
+      document.getElementById('user-name').textContent = '@' + val.toLowerCase();
+      status.textContent = '// Сохранено!'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  // ===== CLANS DATA =====
+  var CLANS = [
+    { rank: '// КЛАН #01', name: 'RADIXHEIM', tag: 'КЛАН #01 • КОАЛИЦИЯ', members: 70, maxMembers: 70, leader: 'JDH' },
+    { rank: '// КЛАН #02', name: 'GAULHEIM',  tag: 'КЛАН #02 • КОАЛИЦИЯ', members: 70, maxMembers: 70, leader: 'Joe Barbaro' },
+    { rank: '// КЛАН #03', name: 'ADD',       tag: 'КЛАН #03 • КОАЛИЦИЯ', members: 60, maxMembers: 70, leader: 'N/A' },
+    { rank: '// КЛАН #04', name: 'DRAGON',    tag: 'КЛАН #04 • КОАЛИЦИЯ', members: 60, maxMembers: 70, leader: 'N/A' },
+    { rank: '// КЛАН #05', name: 'WARAXE',    tag: 'КЛАН #05 • КОАЛИЦИЯ', members: 60, maxMembers: 70, leader: 'N/A' },
+  ];
+
+  function renderClans() {
+    var grid = document.getElementById('clans-grid');
+    var total = 0;
+    CLANS.forEach(function(c) { total += c.members; });
+
+    CLANS.forEach(function(c, i) {
+      var pct = Math.round((c.members / c.maxMembers) * 100);
+      var card = document.createElement('div');
+      card.className = 'clan-card reveal';
+      card.innerHTML =
+        '<div class="clan-rank">'+escHtml(c.rank)+'</div>' +
+        '<div class="clan-name">'+escHtml(c.name)+'</div>' +
+        '<div class="clan-tag">'+escHtml(c.tag)+'</div>' +
+        '<div class="clan-bar-wrap">' +
+          '<div class="clan-bar-label"><span>ЗАПОЛНЕНИЕ</span><span>'+pct+'%</span></div>' +
+          '<div class="clan-bar-bg"><div class="clan-bar-fill" data-w="'+pct+'"></div></div>' +
+        '</div>' +
+        '<div class="clan-num">'+c.members+'</div>' +
+        '<div class="clan-num-label">// УЧАСТНИКОВ</div>' +
+        '<div class="clan-leader">ЛИДЕР: <span>'+escHtml(c.leader)+'</span></div>';
+      grid.appendChild(card);
+    });
+
+    // Обновляем счётчики
+    var heroTotal = document.getElementById('hero-total');
+    var bigCounter = document.getElementById('big-counter');
+    if (heroTotal) heroTotal.textContent = total;
+    if (bigCounter) bigCounter.textContent = total;
+
+    var pctTotal = Math.min(100, Math.round((total / 500) * 100));
+    var fill = document.getElementById('progress-fill');
+    var pctEl = document.getElementById('progress-pct');
+    if (fill) setTimeout(function() { fill.style.width = pctTotal + '%'; }, 400);
+    if (pctEl) pctEl.textContent = pctTotal + '%';
+
+    // Ticker
+    document.querySelectorAll('#ticker-count, #ticker-count2').forEach(function(el) { el.textContent = total; });
+  }
+
+  // ===== SCROLL REVEAL =====
+  function initReveal() {
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) { e.target.classList.add('visible'); }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(function(el) { obs.observe(el); });
+
+    // Animate clan bars
+    var barObs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          e.target.querySelectorAll('.clan-bar-fill').forEach(function(bar) {
+            bar.style.width = (bar.getAttribute('data-w') || 0) + '%';
+          });
+        }
+      });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('.clan-card').forEach(function(c) { barObs.observe(c); });
+  }
+
+  // ===== COMMENTS =====
+  function setRating(val) {
+    currentRating = val;
+    document.querySelectorAll('.star').forEach(function(s, i) {
+      s.style.color = i < val ? 'var(--red)' : 'var(--border)';
+    });
+  }
+
+  function getSpamCooldown() {
+    var last = localStorage.getItem('razgrom_last_comment');
+    if (!last) return 0;
+    return Math.max(0, SPAM_DELAY - Math.floor((Date.now() - parseInt(last)) / 1000));
+  }
+
+  function startCooldownTimer(statusEl) {
+    function tick() {
+      var left = getSpamCooldown();
+      if (left <= 0) { statusEl.textContent = ''; return; }
+      statusEl.textContent = '// Подожди ' + left + ' сек.';
+      statusEl.style.color = 'var(--red)';
+      setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  function copyId(id) {
+    function fallback() {
+      var el = document.createElement('textarea');
+      el.value = id; el.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(el); el.focus(); el.select();
+      try { document.execCommand('copy'); showCopyToast(); } catch(e) {}
+      document.body.removeChild(el);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(id).then(showCopyToast, fallback);
+    } else { fallback(); }
+  }
+
+  function copyReplyIds(commentId, replyId) { copyId(commentId + ' / ' + replyId); }
+
+  function showCopyToast() {
+    var t = document.getElementById('copy-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'copy-toast';
+      t.style.cssText = 'position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:var(--purple);color:#fff;font-family:IBM Plex Mono,monospace;font-size:0.75rem;padding:8px 20px;letter-spacing:2px;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+      t.textContent = '// ID скопирован';
+      document.body.appendChild(t);
+    }
+    t.style.opacity = '1';
+    setTimeout(function() { t.style.opacity = '0'; }, 2000);
+  }
+
+  // Роль по клику (только для авторизованных модераторов)
+  var roleClicks = {};
+  function handleRoleClick(id, name) {
+    if (!canModerate()) return;
+    roleClicks[id] = (roleClicks[id] || 0) + 1;
+    if (roleClicks[id] >= 3) {
+      roleClicks[id] = 0;
+      var role = prompt('Роль (ADMIN, Moderator, Fake, leader или пусто для сброса):');
+      if (role === null) return;
+      var validRoles = ['ADMIN','Moderator','Fake','leader',''];
+      if (!validRoles.includes(role)) { alert('Неверная роль'); return; }
+      db.collection('comments').doc(id).update({ role: role || null })
+        .then(function() { alert('Роль установлена!'); });
+    }
+  }
+
+  var replyRoleClicks = {};
+  function handleReplyRoleClick(commentId, replyId, name) {
+    if (!canModerate()) return;
+    var key = commentId + '_' + replyId;
+    replyRoleClicks[key] = (replyRoleClicks[key] || 0) + 1;
+    if (replyRoleClicks[key] >= 3) {
+      replyRoleClicks[key] = 0;
+      var role = prompt('Роль (ADMIN, Moderator, Fake, leader или пусто):');
+      if (role === null) return;
+      var validRoles = ['ADMIN','Moderator','Fake','leader',''];
+      if (!validRoles.includes(role)) { alert('Неверная роль'); return; }
+      db.collection('comments').doc(commentId).collection('replies').doc(replyId)
+        .update({ role: role || null }).then(function() { alert('Роль установлена!'); });
+    }
+  }
+
+  async function submitComment() {
+    if (!currentUser) {
+      var s = document.getElementById('c-status');
+      s.textContent = '// Войди через Google'; s.style.color = 'var(--red)'; return;
+    }
+    var text = document.getElementById('c-text').value.trim();
+    var status = document.getElementById('c-status');
+    if (!text) { status.textContent = '// Напиши сообщение'; status.style.color = 'var(--red)'; return; }
+    if (!currentRating) { status.textContent = '// Поставь оценку'; status.style.color = 'var(--red)'; return; }
+    var cd = getSpamCooldown();
+    if (cd > 0) { startCooldownTimer(status); return; }
+    status.textContent = '// Отправка...'; status.style.color = 'var(--text-dim)';
+    try {
+      var ud = currentUserDoc || {};
+      await db.collection('comments').add({
+        name: currentUser.displayName,
+        username: ud.username || null,
+        avatar: currentUser.photoURL,
+        uid: currentUser.uid,
+        text: text,
+        rating: currentRating,
+        role: currentUserRole || null,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      localStorage.setItem('razgrom_last_comment', Date.now().toString());
+      document.getElementById('c-text').value = '';
+      currentRating = 0;
+      document.querySelectorAll('.star').forEach(function(s) { s.style.color = 'var(--border)'; });
+      status.textContent = '// Отправлено!'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  function openReplyForm(id, name) {
+    if (!currentUser) { handleAuth(); return; }
+    replyToId = id; replyToName = name;
+    document.getElementById('reply-to-label').textContent = '// Ответ для: ' + name;
+    var wrap = document.getElementById('reply-form-wrap');
+    wrap.style.display = 'block';
+    var cel = document.getElementById('comment-' + id);
+    if (cel) cel.after(wrap);
+    document.getElementById('r-text').focus();
+  }
+
+  function closeReplyForm() {
+    replyToId = null; replyToName = null;
+    document.getElementById('reply-form-wrap').style.display = 'none';
+    document.getElementById('r-text').value = '';
+    document.getElementById('r-status').textContent = '';
+  }
+
+  async function submitReply() {
+    if (!currentUser) {
+      var s = document.getElementById('r-status');
+      s.textContent = '// Войди через Google'; s.style.color = 'var(--red)'; return;
+    }
+    var text = document.getElementById('r-text').value.trim();
+    var status = document.getElementById('r-status');
+    if (!text) { status.textContent = '// Напиши ответ'; status.style.color = 'var(--red)'; return; }
+    var cd = getSpamCooldown();
+    if (cd > 0) { startCooldownTimer(status); return; }
+    status.textContent = '// Отправка...'; status.style.color = 'var(--text-dim)';
+    try {
+      var ud = currentUserDoc || {};
+      await db.collection('comments').doc(replyToId).collection('replies').add({
+        name: currentUser.displayName,
+        username: ud.username || null,
+        avatar: currentUser.photoURL,
+        uid: currentUser.uid,
+        text: text,
+        role: currentUserRole || null,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      localStorage.setItem('razgrom_last_comment', Date.now().toString());
+      closeReplyForm();
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  // Удаление — только для модераторов (проверяется на клиенте + должны быть Firebase Rules на сервере)
+  async function deleteComment() {
+    if (!canModerate()) { alert('Нет прав'); return; }
+    var id = document.getElementById('del-id').value.trim();
+    var status = document.getElementById('del-status');
+    if (!id) { status.textContent = '// Введи ID'; status.style.color = 'var(--red)'; return; }
+    if (!confirm('Удалить комментарий?')) return;
+    try {
+      await db.collection('comments').doc(id).delete();
+      document.getElementById('del-id').value = '';
+      status.textContent = '// Удалено'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  async function deleteReply() {
+    if (!canModerate()) { alert('Нет прав'); return; }
+    var commentId = document.getElementById('del-comment-id').value.trim();
+    var replyId = document.getElementById('del-reply-id').value.trim();
+    var status = document.getElementById('del-reply-status');
+    if (!commentId || !replyId) { status.textContent = '// Введи оба ID'; status.style.color = 'var(--red)'; return; }
+    if (!confirm('Удалить ответ?')) return;
+    try {
+      await db.collection('comments').doc(commentId).collection('replies').doc(replyId).delete();
+      document.getElementById('del-comment-id').value = '';
+      document.getElementById('del-reply-id').value = '';
+      status.textContent = '// Удалено'; status.style.color = '#27ae60';
+      setTimeout(function() { status.textContent = ''; }, 3000);
+    } catch(e) { status.textContent = '// Ошибка: ' + e.code; status.style.color = 'var(--red)'; }
+  }
+
+  function getDisplayLabel(data) {
+    // Показываем @username если есть, иначе displayName
+    if (data.username) return '@' + data.username;
+    return data.name || '—';
+  }
+
+  function renderComment(d) {
+    var data = d.data();
+    var stars = '★'.repeat(data.rating || 0) + '☆'.repeat(5 - (data.rating || 0));
+    var date = data.ts ? new Date(data.ts.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+    var roleBadge = getRoleBadge(data.name, data.role);
+    var nameColor = getNameColor(data.name, data.role);
+    var displayLabel = escHtml(getDisplayLabel(data));
+    var safeNameJs = (data.name || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'').replace(/>/g,'');
+    var card = document.createElement('div');
+    card.id = 'comment-' + d.id;
+    card.style.cssText = 'background:var(--dark2);border:1px solid var(--border);border-left:3px solid var(--red);padding:18px 22px;';
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+          (data.avatar ? '<img src="'+escHtml(data.avatar)+'" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--border);">' : '') +
+          '<span onclick="handleRoleClick(\''+d.id+'\',\''+safeNameJs+'\')" style="font-family:Russo One,sans-serif;font-size:0.95rem;color:'+nameColor+';cursor:'+(canModerate()?'pointer':'default')+';" title="'+(canModerate()?'Нажми 3 раза для роли':'')+'">'+displayLabel+'</span>' +
+          roleBadge +
+          '<span style="color:var(--red);font-size:0.95rem;">'+stars+'</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;color:var(--text-dim);">'+date+'</span>' +
+          (canModerate() ? '<button onclick="copyId(\''+d.id+'\')" style="font-family:IBM Plex Mono,monospace;font-size:0.6rem;color:#888;background:var(--dark3);border:1px solid var(--border);cursor:pointer;padding:3px 8px;" title="Скопировать ID">ID</button>' : '') +
+        '</div>' +
+      '</div>' +
+      '<p style="font-size:0.9rem;line-height:1.7;color:var(--text-dim);margin-bottom:12px;">'+escHtml(data.text)+'</p>' +
+      '<div id="replies-'+d.id+'" style="margin-left:16px;margin-top:4px;display:flex;flex-direction:column;gap:3px;border-left:2px solid var(--border);padding-left:12px;"></div>' +
+      '<button onclick="openReplyForm(\''+d.id+'\',\''+safeNameJs+'\')" style="margin-top:10px;background:transparent;color:var(--text-dim);border:1px solid var(--border);font-family:IBM Plex Mono,monospace;font-size:0.6rem;letter-spacing:2px;padding:5px 12px;cursor:pointer;" onmouseover="this.style.color=\'var(--purple)\';this.style.borderColor=\'var(--purple)\'" onmouseout="this.style.color=\'var(--text-dim)\';this.style.borderColor=\'var(--border)\'">// ОТВЕТИТЬ</button>';
+
+    db.collection('comments').doc(d.id).collection('replies').orderBy('ts','asc').onSnapshot(function(rSnap) {
+      var repliesEl = document.getElementById('replies-' + d.id);
+      if (!repliesEl) return;
+      repliesEl.innerHTML = '';
+      rSnap.forEach(function(r) {
+        var rd = r.data();
+        var rBadge = getRoleBadge(rd.name, rd.role);
+        var rColor = getNameColor(rd.name, rd.role);
+        var rDate = rd.ts ? new Date(rd.ts.seconds * 1000).toLocaleDateString('ru-RU') : '—';
+        var rLabel = escHtml(getDisplayLabel(rd));
+        var safeRNameJs = (rd.name || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/</g,'').replace(/>/g,'');
+        var rEl = document.createElement('div');
+        rEl.style.cssText = 'padding:10px 14px;background:var(--dark3);border:1px solid var(--border);margin-bottom:2px;';
+        rEl.innerHTML =
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+            (rd.avatar ? '<img src="'+escHtml(rd.avatar)+'" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);">' : '') +
+            '<span onclick="handleReplyRoleClick(\''+d.id+'\',\''+r.id+'\',\''+safeRNameJs+'\')" style="font-family:Russo One,sans-serif;font-size:0.85rem;color:'+rColor+';cursor:'+(canModerate()?'pointer':'default')+';">'+rLabel+'</span>' +
+            rBadge +
+            '<span style="font-family:IBM Plex Mono,monospace;font-size:0.55rem;color:var(--text-dim);">'+rDate+'</span>' +
+            (canModerate() ? '<button onclick="copyReplyIds(\''+d.id+'\',\''+r.id+'\')" style="font-family:IBM Plex Mono,monospace;font-size:0.5rem;color:#555;background:var(--dark);border:1px solid var(--border);cursor:pointer;padding:2px 6px;">ID</button>' : '') +
+          '</div>' +
+          '<p style="font-size:0.85rem;line-height:1.65;color:var(--text-dim);">'+escHtml(rd.text)+'</p>';
+        repliesEl.appendChild(rEl);
+      });
+    });
+    return card;
+  }
+
+  db.collection('comments').orderBy('ts','desc').onSnapshot(function(snap) {
+    var list = document.getElementById('comments-list');
+    var replyWrap = document.getElementById('reply-form-wrap');
+    list.innerHTML = '';
+    if (snap.empty) {
+      list.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:0.75rem;color:var(--text-dim);padding:20px 0;">// Комментариев пока нет. Будь первым.</div>';
+      return;
+    }
+    snap.forEach(function(d) { list.appendChild(renderComment(d)); });
+    if (replyToId) {
+      var cel = document.getElementById('comment-' + replyToId);
+      if (cel) cel.after(replyWrap);
+    }
+  }, function(err) {
+    document.getElementById('comments-list').innerHTML =
+      '<div style="font-family:IBM Plex Mono,monospace;font-size:0.75rem;color:var(--red);padding:20px 0;">// Ошибка: ' + err.code + '</div>';
+  });
+
+  // ===== INIT =====
+  renderClans();
+  initReveal();
+</script>
+</body>
+</html>
